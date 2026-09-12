@@ -28,6 +28,12 @@ export async function SiteHeader() {
           >
             リスニング
           </Link>
+          <Link
+            href="/vocabulary"
+            className="hidden rounded-full px-3 py-2 text-ink-soft transition hover:text-ink sm:inline-block"
+          >
+            単語帳
+          </Link>
           {user && (
             <>
               <Link

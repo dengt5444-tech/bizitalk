@@ -38,6 +38,13 @@ CEO、海外の同僚、取引先——相手役・シチュエーション別�
 - リスニング音声は一度生成してキャッシュを使い回す仕組みのため、AI会話のような利用回数の上限は設けていません(聞き放題)。
 - 復習リスト(`/review`)は、AI会話由来の単語(`saved_words`)とリスニング教材由来の単語(`gakuto_saved_words`)を1つの画面にまとめて表示します。一覧表示に加えて、シャッフルしたフラッシュカード形式(単語⇄意味をタップで切り替え、「覚えていた/もう一度」で仕分け)で復習できるモードも用意しています(`src/components/ReviewWordsView.tsx`)。
 
+### 単語帳(`/vocabulary`)
+
+- ビジリスとは共有せず、BizTalk独自のテーブル(`vocab_decks`)にビジネス英単語帳を持っています。単語帳ごとにテーマ(外資系企業で使うビジネス英単語、ワーキングホリデー・海外就労の職場で使う実務英語など)と単語リスト(単語・意味・例文)を持ちます。
+- 各単語帳は「単語一覧」「フラッシュカード」「4択テスト」の3モードで学習できます(`src/components/VocabDeckPractice.tsx`)。4択テストの選択肢は単語帳内の他の単語の意味から自動生成しており、テスト問題を個別に作成する必要はありません。
+- テストで間違えた単語は(AI会話のフィードバックと同じ)`saved_words` テーブルに保存され、`/review` の復習リストにも表示されます。
+- リスニングと同様、リスニングプランまたはAI会話の各プランのいずれかで全単語帳が解放されます。1つの単語帳は無料お試しとして公開しています。
+
 ### リアルタイム音声について
 
 - OpenAI アカウントで Realtime API (`gpt-realtime`) が利用可能である必要があります。追加の環境変数は不要で、既存の `OPENAI_API_KEY` を使用します。
@@ -61,7 +68,7 @@ npm run dev
 
 ### 初回セットアップ
 
-1. Supabaseプロジェクトを作成し、SQL Editorで `supabase/migrations/0001_init.sql` を実行
+1. Supabaseプロジェクトを作成し、SQL Editorで `supabase/migrations/0001_init.sql` → `0002_vocab_decks.sql` の順に実行
 2. 以下のスクリプトを実行(`NEXT_PUBLIC_SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` を環境変数として読み込みます)
 
 ```bash
@@ -70,6 +77,9 @@ node scripts/setup-storage.mjs
 
 # AI会話練習のシーンを投入(全18シーン)
 node scripts/seed-conversation-scenarios.mjs
+
+# 単語帳を投入
+node scripts/seed-vocab-decks.mjs
 ```
 
 ## デプロイ
