@@ -12,6 +12,13 @@ export async function GET(request: Request) {
     if (!error) {
       return NextResponse.redirect(`${origin}${next}`);
     }
+    // A failed magic-link exchange (e.g. opened on a different device/
+    // browser than the one that requested it, so the PKCE verifier cookie
+    // doesn't match) must never leave whatever session was already active
+    // in this browser looking like a successful login — sign it out so the
+    // failure is unambiguous instead of silently falling back to a
+    // previously logged-in account.
+    await supabase.auth.signOut();
     return NextResponse.redirect(
       `${origin}/login?error=auth&reason=${encodeURIComponent(error.message)}`,
     );

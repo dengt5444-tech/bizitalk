@@ -71,7 +71,7 @@ function LoginForm() {
     setVerifyError("");
 
     const supabase = createClient();
-    const { error } = await supabase.auth.verifyOtp({
+    const { data, error } = await supabase.auth.verifyOtp({
       email,
       token: code.trim(),
       type: "email",
@@ -79,6 +79,19 @@ function LoginForm() {
 
     if (error) {
       setVerifyError(error.message);
+      setVerifying(false);
+      return;
+    }
+
+    // Safety net: the resulting session should always be for the email
+    // just verified. If it's ever anything else, sign out rather than
+    // silently continuing into a mismatched account.
+    const resultEmail = data.user?.email?.toLowerCase();
+    if (resultEmail && resultEmail !== email.trim().toLowerCase()) {
+      await supabase.auth.signOut();
+      setVerifyError(
+        "認証したメールアドレスが一致しませんでした。お手数ですがもう一度お試しください。",
+      );
       setVerifying(false);
       return;
     }

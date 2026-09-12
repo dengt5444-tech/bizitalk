@@ -3,51 +3,6 @@ import type Stripe from "stripe";
 import { createStripeClient } from "@/lib/stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
 
-const ACTIVE_STATUSES = new Set(["active", "trialing"]);
-
-// If this subscription was created with a referral code, record (or
-// update) the referral once the referred user's subscription is created.
-// Status only ever moves pending -> rewarded, never back down, so a later
-// cancellation doesn't claw back an already-earned referral bonus.
-async function recordReferralIfAny(
-  subscription: Stripe.Subscription,
-  userId: string | undefined,
-) {
-  if (!userId) return;
-
-  const referrerUserId = subscription.metadata?.referrer_user_id;
-  const referralCode = subscription.metadata?.referral_code;
-  if (!referrerUserId || !referralCode || referrerUserId === userId) return;
-
-  // Referral bookkeeping is best-effort and must never take down core
-  // subscription sync (e.g. if the referrals table migration hasn't been
-  // applied yet in some environment).
-  try {
-    const admin = createAdminClient();
-    const { data: existing } = await admin
-      .from("referrals")
-      .select("status")
-      .eq("referred_user_id", userId)
-      .maybeSingle();
-
-    if (existing?.status === "rewarded") return;
-
-    await admin.from("referrals").upsert(
-      {
-        referrer_user_id: referrerUserId,
-        referred_user_id: userId,
-        referral_code: referralCode,
-        stripe_subscription_id: subscription.id,
-        status: ACTIVE_STATUSES.has(subscription.status) ? "rewarded" : "pending",
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: "referred_user_id" },
-    );
-  } catch (err) {
-    console.error("Failed to record referral:", err instanceof Error ? err.message : err);
-  }
-}
-
 function periodEnd(subscription: Stripe.Subscription): string | null {
   const timestamp =
     subscription.items.data[0]?.current_period_end ??
@@ -89,8 +44,6 @@ async function upsertFromSubscription(
     },
     { onConflict: "user_id" },
   );
-
-  await recordReferralIfAny(subscription, userId);
 }
 
 export async function POST(request: Request) {
