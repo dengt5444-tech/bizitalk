@@ -7,12 +7,15 @@ import { Quiz } from "@/components/Quiz";
 import { VocabList } from "@/components/VocabList";
 import { DialogueTranscript } from "@/components/DialogueTranscript";
 import {
+  EXCLUDED_MATERIAL_SLUGS,
   LEVEL_LABELS,
+  MATERIAL_SCENES,
   type DialogueLine,
   type MaterialLevel,
   type QuizQuestion,
   type VocabItem,
 } from "@/lib/materials";
+import { SceneIllustration } from "@/components/illustrations/SceneIllustration";
 
 export const dynamic = "force-dynamic";
 
@@ -22,6 +25,9 @@ export default async function MaterialPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
+  if (EXCLUDED_MATERIAL_SLUGS.has(slug)) {
+    notFound();
+  }
   const supabase = await createClient();
   const { data: material } = await supabase
     .from("gakuto_materials")
@@ -50,6 +56,13 @@ export default async function MaterialPage({
       >
         ← 教材一覧に戻る
       </Link>
+
+      <div className="mt-5 overflow-hidden rounded-2xl">
+        <SceneIllustration
+          scene={MATERIAL_SCENES[material.slug] ?? "report"}
+          size="hero"
+        />
+      </div>
 
       <div className="mt-5 flex flex-wrap gap-2">
         <span className="inline-block rounded-full bg-signal-tint px-3 py-1 text-xs font-semibold text-signal-dim">

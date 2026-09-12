@@ -38,3 +38,27 @@ export const CATEGORY_ORDER: ScenarioCategory[] = [
   "clients",
   "leadership",
 ];
+
+// Which SceneIllustration to show for each scenario, so learners get a
+// sense of the situation before starting. Anything not listed falls back
+// to "meeting" in the UI.
+export const SCENARIO_SCENES: Record<string, import("@/components/illustrations/SceneIllustration").SceneKey> = {
+  "small-talk-before-meeting": "casual",
+  "lunch-invite": "casual",
+  "office-tour-new-hire": "casual",
+  "peer-feedback": "interview",
+  "project-kickoff": "meeting",
+  "job-interview-practice": "interview",
+  "india-standup": "desk-call",
+  "singapore-timezone": "desk-call",
+  "uk-manager-1on1": "interview",
+  "australia-casual-chat": "casual",
+  "germany-project-sync": "meeting",
+  "client-negotiation": "negotiation",
+  "vendor-renewal": "negotiation",
+  "handling-a-complaint": "support",
+  "investor-update": "desk-call",
+  "ceo-weekly-update": "meeting",
+  "budget-pitch": "presentation",
+  "performance-review": "interview",
+};

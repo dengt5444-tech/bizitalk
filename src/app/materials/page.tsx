@@ -2,10 +2,13 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser, isListeningEntitled } from "@/lib/entitlements";
 import {
+  EXCLUDED_MATERIAL_SLUGS,
   LEVEL_LABELS,
   LEVEL_ORDER,
+  MATERIAL_SCENES,
   type MaterialLevel,
 } from "@/lib/materials";
+import { SceneIllustration } from "@/components/illustrations/SceneIllustration";
 
 export const dynamic = "force-dynamic";
 
@@ -29,6 +32,7 @@ export default async function MaterialsPage() {
     groups.set(level, []);
   }
   for (const material of materials ?? []) {
+    if (EXCLUDED_MATERIAL_SLUGS.has(material.slug)) continue;
     const level = (material.level as MaterialLevel) ?? "beginner";
     const list = groups.get(level) ?? [];
     list.push(material);
@@ -62,8 +66,9 @@ export default async function MaterialsPage() {
               </div>
 
               <ul className="grid gap-4 sm:grid-cols-2">
-                {items.map((material, index) => {
+                {items.map((material) => {
                   const unlocked = material.is_free || subscribed;
+                  const scene = MATERIAL_SCENES[material.slug] ?? "report";
                   return (
                     <li key={material.id}>
                       <Link
@@ -72,9 +77,7 @@ export default async function MaterialsPage() {
                       >
                         <div>
                           <div className="flex items-center justify-between">
-                            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-paper-dim font-display text-sm text-ink-soft">
-                              {index + 1}
-                            </span>
+                            <SceneIllustration scene={scene} pixelSize={44} />
                             {material.is_free ? (
                               <span className="rounded-full bg-amber-tint px-2.5 py-1 text-xs font-semibold text-amber-dim">
                                 無料

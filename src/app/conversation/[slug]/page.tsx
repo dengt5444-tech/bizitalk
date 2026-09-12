@@ -4,7 +4,14 @@ import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser, isEntitled } from "@/lib/entitlements";
 import { ConversationRoom } from "@/components/ConversationRoom";
 import { Avatar } from "@/components/Avatar";
-import { CATEGORY_LABELS, LEVEL_LABELS, type ScenarioCategory, type ScenarioLevel } from "@/lib/scenarios";
+import {
+  CATEGORY_LABELS,
+  LEVEL_LABELS,
+  SCENARIO_SCENES,
+  type ScenarioCategory,
+  type ScenarioLevel,
+} from "@/lib/scenarios";
+import { SceneIllustration } from "@/components/illustrations/SceneIllustration";
 
 export const dynamic = "force-dynamic";
 
@@ -41,6 +48,13 @@ export default async function ConversationScenarioPage({
       >
         ← シーン一覧に戻る
       </Link>
+
+      <div className="mt-5 overflow-hidden rounded-2xl">
+        <SceneIllustration
+          scene={SCENARIO_SCENES[scenario.slug] ?? "meeting"}
+          size="hero"
+        />
+      </div>
 
       <div className="mt-5 flex flex-wrap gap-2">
         <span className="inline-block rounded-full bg-paper-dim px-3 py-1 text-xs font-medium text-ink-faint">

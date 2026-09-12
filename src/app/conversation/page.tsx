@@ -3,11 +3,13 @@ import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser, isEntitled } from "@/lib/entitlements";
 import { Avatar } from "@/components/Avatar";
 import { CategoryIllustration } from "@/components/illustrations/CategoryIllustration";
+import { SceneIllustration } from "@/components/illustrations/SceneIllustration";
 import {
   CATEGORY_DESCRIPTIONS,
   CATEGORY_LABELS,
   CATEGORY_ORDER,
   LEVEL_LABELS,
+  SCENARIO_SCENES,
   type ScenarioCategory,
   type ScenarioLevel,
 } from "@/lib/scenarios";
@@ -79,6 +81,7 @@ export default async function ConversationPage() {
               <ul className="grid gap-4 sm:grid-cols-2">
                 {items.map((scenario) => {
                   const unlocked = loggedInAndEntitled(scenario.is_free);
+                  const scene = SCENARIO_SCENES[scenario.slug] ?? "meeting";
                   return (
                     <li key={scenario.id}>
                       <Link
@@ -87,7 +90,10 @@ export default async function ConversationPage() {
                       >
                         <div>
                           <div className="flex items-center justify-between">
-                            <Avatar name={scenario.persona_name} />
+                            <div className="flex items-center gap-2">
+                              <SceneIllustration scene={scene} pixelSize={40} />
+                              <Avatar name={scenario.persona_name} size="sm" />
+                            </div>
                             <div className="flex flex-col items-end gap-1">
                               <span className="rounded-full bg-paper-dim px-2.5 py-1 text-[11px] font-medium text-ink-faint">
                                 {LEVEL_LABELS[(scenario.level as ScenarioLevel) ?? "beginner"]}

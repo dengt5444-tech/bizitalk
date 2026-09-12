@@ -35,13 +35,25 @@ const FAQ: { question: string; answer: string }[] = [
     answer:
       "リスニングプランのほか、お試し・スタンダード・使い放題プランのいずれかにご登録いただいても、リスニング教材は聞き放題でご利用いただけます。",
   },
+  {
+    question: "「先行提供価格」とはなんですか?",
+    answer:
+      "現在ご案内している価格は、サービス立ち上げ期にご利用いただくための先行提供価格です。各プランには将来移行を予定している正式価格を明記しており、価格変更の際は事前にお知らせします(すでにご登録中の方が、通知なく値上げされることはありません)。",
+  },
 ];
 
 type PlanCard = {
   key: "listening" | "trial" | "standard" | "unlimited";
   badge: string;
   name: string;
-  originalPrice: string;
+  // The price this plan is genuinely planned to move to later, once the
+  // introductory period ends — never a number invented purely to look
+  // like a bigger discount. Framed as a forward-looking plan (not a
+  // struck-through "was" price implying past sales history), since Japan's
+  // Act against Unjustifiable Premiums and Misleading Representations
+  // (景品表示法) treats a fabricated "original price" that was never
+  // actually charged as a misleading dual-price display.
+  futurePrice: string;
   price: string;
   accent: "amber" | "signal";
   features: string[];
@@ -57,9 +69,9 @@ export default async function PricingPage() {
   const plans: PlanCard[] = [
     {
       key: "listening",
-      badge: "期間限定デモ価格",
+      badge: "先行提供価格",
       name: "リスニングプラン",
-      originalPrice: "¥1,980",
+      futurePrice: "¥1,980",
       price: "¥490",
       accent: "amber",
       features: [
@@ -71,9 +83,9 @@ export default async function PricingPage() {
     },
     {
       key: "trial",
-      badge: "お試し",
+      badge: "先行提供価格",
       name: "お試しプラン",
-      originalPrice: "",
+      futurePrice: "¥1,980",
       price: "¥980",
       accent: "signal",
       features: [
@@ -85,9 +97,9 @@ export default async function PricingPage() {
     },
     {
       key: "standard",
-      badge: "期間限定デモ価格",
+      badge: "先行提供価格",
       name: "スタンダードプラン",
-      originalPrice: "",
+      futurePrice: "¥9,800",
       price: "¥4,990",
       accent: "signal",
       features: [
@@ -100,9 +112,9 @@ export default async function PricingPage() {
     },
     {
       key: "unlimited",
-      badge: "使い放題",
+      badge: "先行提供価格・使い放題",
       name: "AI英会話使い放題プラン",
-      originalPrice: "",
+      futurePrice: "¥19,800",
       price: "¥9,900",
       accent: "signal",
       features: [
@@ -156,17 +168,15 @@ export default async function PricingPage() {
 
               <p className="mt-4 text-sm font-medium text-ink-soft">{plan.name}</p>
 
-              <div className="mt-2 flex items-end justify-center gap-3">
-                {plan.originalPrice && (
-                  <span className="text-xl font-medium text-ink-faint line-through">
-                    {plan.originalPrice}
-                  </span>
-                )}
+              <div className="mt-2 flex items-end justify-center gap-2">
                 <span className="font-display text-4xl font-semibold text-ink">
                   {plan.price}
                 </span>
                 <span className="text-sm text-ink-soft">/月</span>
               </div>
+              <p className="mt-1.5 text-xs text-ink-faint">
+                正式価格は{plan.futurePrice}/月を予定(現在は先行提供価格)
+              </p>
 
               <ul className="mt-7 space-y-2.5 text-left text-sm text-ink-soft">
                 {plan.features.map((feature) => (
