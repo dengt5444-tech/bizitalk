@@ -20,9 +20,8 @@ CEO、海外の同僚、取引先——相手役・シチュエーション別�
 ## 構成
 
 - **認証**: Supabase Auth(マジックリンク + 6桁コードのフォールバック)
-- **AI会話練習**: 4カテゴリー・全18シーン(`conversation_scenarios`)
+- **AI会話練習**: 4カテゴリー・全26シーン(`conversation_scenarios`)
   - 同僚・日常 / 海外の同僚(インド・シンガポール・イギリス・オーストラリア・ドイツ) / 顧客・取引先 / 経営陣・上司(CEO・CFO)
-  - 各キャラクターは背景に応じたアクセント(インド英語・イギリス英語・オーストラリア英語・ドイツ訛りなど)で話すよう `system_prompt` で指示しており、実在の相手と話しているような没入感とアクセント学習の両方を狙っている
   - 対応ブラウザでは OpenAI Realtime API(WebRTC, `gpt-realtime`)でマイク⇄AIの低遅延な音声対話を行い、未対応ブラウザ/接続失敗時はテキストのターン制チャットにフォールバック
   - 会話は `conversation_sessions` に保存。**プランごとに月あたりのセッション数に上限あり**(`src/lib/limits.ts`)。リアルタイム音声APIには実コストがかかるため、各プランの割引価格でも赤字にならないよう設定した安全マージン付きの上限。どのAI会話プランに入っているかは、本アプリの `subscriptions` テーブルに保存された `price_id` がどの環境変数の価格と一致するかで判定(`src/lib/entitlements.ts` の `getConversationPlan`)
 - **フィードバック**: 会話終了時、`gpt-4o` が文法・語彙・丁寧さのスコアと添削・語彙提案を生成。実発話由来のフィラー(um, uhなど)を誤って指摘しないようガードしたプロンプトを使用
@@ -77,7 +76,7 @@ npm run dev
 # Supabase Storage に音声キャッシュ用バケットを作成
 node scripts/setup-storage.mjs
 
-# AI会話練習のシーンを投入(全18シーン)
+# AI会話練習のシーンを投入(全26シーン)
 node scripts/seed-conversation-scenarios.mjs
 
 # 単語帳を投入

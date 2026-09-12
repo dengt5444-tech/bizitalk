@@ -175,7 +175,7 @@ export default function Home() {
             ))}
           </div>
           <p className="mt-6 text-center text-sm text-ink-soft">
-            ほかにも、シンガポールやドイツの同僚、投資家、採用面接官など全18シーンをご用意しています。
+            ほかにも、シンガポールやドイツの同僚、投資家、採用面接官など全26シーンをご用意しています。
           </p>
         </div>
       </section>

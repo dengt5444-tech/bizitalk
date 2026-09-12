@@ -61,4 +61,12 @@ export const SCENARIO_SCENES: Record<string, import("@/components/illustrations/
   "ceo-weekly-update": "meeting",
   "budget-pitch": "presentation",
   "performance-review": "interview",
+  "sprint-retrospective": "meeting",
+  "mentoring-session": "interview",
+  "brazil-partner-kickoff": "meeting",
+  "remote-onboarding-global-team": "desk-call",
+  "client-upsell-pitch": "presentation",
+  "client-escalation-call": "support",
+  "board-meeting-prep": "presentation",
+  "cross-department-priority-alignment": "negotiation",
 };
