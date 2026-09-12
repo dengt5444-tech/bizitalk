@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createStripeClient } from "@/lib/stripe";
+import { resolveReferralCode } from "@/lib/referrals";
 
 // Four Stripe prices under two entitlement tables: the standalone
 // "listening" plan writes to gakuto_subscriptions (shared with Bijirisu),
@@ -63,6 +64,16 @@ export async function POST(request: Request) {
     );
   }
 
+  const rawReferralCode = typeof body?.referralCode === "string" ? body.referralCode : "";
+  // Best-effort: an unrecognized code, or even a referrals-table hiccup,
+  // should never block checkout itself.
+  const referral = rawReferralCode
+    ? await resolveReferralCode(rawReferralCode).catch((err) => {
+        console.error("Failed to resolve referral code:", err instanceof Error ? err.message : err);
+        return null;
+      })
+    : null;
+
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
   const stripe = createStripeClient();
 
@@ -74,7 +85,11 @@ export async function POST(request: Request) {
       customer_email: user.email,
       client_reference_id: user.id,
       subscription_data: {
-        metadata: { supabase_user_id: user.id, plan: entitlementTableTag(plan) },
+        metadata: {
+          supabase_user_id: user.id,
+          plan: entitlementTableTag(plan),
+          ...(referral ? { referral_code: referral.code } : {}),
+        },
       },
       success_url: `${siteUrl}${successPathForPlan(plan)}?checkout=success`,
       cancel_url: `${siteUrl}/pricing?checkout=cancelled`,

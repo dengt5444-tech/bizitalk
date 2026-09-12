@@ -3,6 +3,51 @@ import type Stripe from "stripe";
 import { createStripeClient } from "@/lib/stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
 
+const ACTIVE_STATUSES = new Set(["active", "trialing"]);
+
+// If this subscription was created with an influencer referral code,
+// record (or update) the redemption once the subscription is created.
+// Status only ever moves pending -> rewarded, never back down, so a
+// later cancellation doesn't claw back an already-earned referral payout.
+async function recordReferralRedemptionIfAny(
+  subscription: Stripe.Subscription,
+  userId: string | undefined,
+) {
+  if (!userId) return;
+
+  const referralCode = subscription.metadata?.referral_code;
+  if (!referralCode) return;
+
+  // Best-effort: referral bookkeeping must never take down core
+  // subscription sync.
+  try {
+    const admin = createAdminClient();
+    const { data: existing } = await admin
+      .from("referral_redemptions")
+      .select("status")
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    if (existing?.status === "rewarded") return;
+
+    await admin.from("referral_redemptions").upsert(
+      {
+        code: referralCode,
+        user_id: userId,
+        stripe_subscription_id: subscription.id,
+        status: ACTIVE_STATUSES.has(subscription.status) ? "rewarded" : "pending",
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "user_id" },
+    );
+  } catch (err) {
+    console.error(
+      "Failed to record referral redemption:",
+      err instanceof Error ? err.message : err,
+    );
+  }
+}
+
 function periodEnd(subscription: Stripe.Subscription): string | null {
   const timestamp =
     subscription.items.data[0]?.current_period_end ??
@@ -44,6 +89,8 @@ async function upsertFromSubscription(
     },
     { onConflict: "user_id" },
   );
+
+  await recordReferralRedemptionIfAny(subscription, userId);
 }
 
 export async function POST(request: Request) {

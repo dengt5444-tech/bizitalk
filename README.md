@@ -70,7 +70,7 @@ npm run dev
 
 ### 初回セットアップ
 
-1. Supabaseプロジェクトを作成し、SQL Editorで `supabase/migrations/0001_init.sql` → `0002_vocab_decks.sql` → `0003_conversation_minutes.sql` → `0004_free_talk.sql` → `0005_referrals.sql` の順に実行
+1. Supabaseプロジェクトを作成し、SQL Editorで `supabase/migrations/0001_init.sql` → `0002_vocab_decks.sql` → `0003_conversation_minutes.sql` → `0004_free_talk.sql` → `0005_referrals.sql` → `0006_influencer_referrals.sql` の順に実行
 2. 以下のスクリプトを実行(`NEXT_PUBLIC_SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` を環境変数として読み込みます)
 
 ```bash
@@ -92,4 +92,10 @@ Vercelにこのリポジトリを接続し、`.env.example` に記載の環境�
 
 AI会話プランの購入時に紹介者へ¥1,000を支払う仕組みは、`src/lib/limits.ts` の各プランの上限(分)を算出する際に「全購入が紹介経由」という最悪ケースとしてコストに織り込み済みです(ただし¥980のお試しプランは、¥1,000の紹介料がプラン価格そのものを上回ってしまうため、このプランについては紹介コストなしとして計算しています)。
 
-紹介コードの発行・入力・追跡を一度実装しましたが、インフルエンサーのような紹介者以外には使いどころがない機能だったため、アプリ側の導線(`/pricing` の入力欄・`/dashboard` のコード表示・Webhookでの記録)は撤去しました。`supabase/migrations/0005_referrals.sql` で作成した `referral_codes` / `referrals` テーブル自体は(データ削除のリスクを避けるため)残してありますが、現在どのコードからも参照されていません。将来また紹介プログラムを導入する場合は、このテーブルを再利用できます。
+紹介コードは、インフルエンサーなど**運営が選んだ相手にのみ手動で発行**する形にしています(一般ユーザーへの自動発行はしていません)。
+
+- 新しいコードの発行: `node scripts/create-referral-code.mjs <コード> "<ラベル(表示用の名前)>"`(例: `node scripts/create-referral-code.mjs YUKI2026 "Yuki (YouTube)"`)
+- 発行したコードは `/pricing?ref=コード` のリンクとして紹介者に渡すか、コードそのものを伝えて `/pricing` の紹介コード入力欄(`ReferralCodeField`)に入力してもらいます(入力値は `localStorage` に保存され、決済時に `/api/checkout` へ送信)。
+- Stripeのサブスクリプションのmetadataにコードを載せ、Webhookで該当ユーザーが実際に有料登録した時点で `referral_redemptions` テーブルに記録します(`status: "pending"` → 初回有効化で `"rewarded"`、以後は解約されても後退しません)。
+- 発行済みコードごとの登録数・有効化数は `/admin/referrals`(`ADMIN_EMAILS` のみアクセス可)で確認できます。
+- **実際の紹介料の支払い(振込など)そのものはまだ自動化していません**。`/admin/referrals` で `status = 'rewarded'` になっているコードを見て、運営側で手動送金する運用を想定しています。

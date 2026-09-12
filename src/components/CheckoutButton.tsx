@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { REFERRAL_CODE_STORAGE_KEY } from "@/components/ReferralCodeField";
 
 type Plan = "listening" | "trial" | "standard" | "unlimited";
 
@@ -32,10 +33,17 @@ export function CheckoutButton({
     setLoading(true);
     setError("");
 
+    let referralCode = "";
+    try {
+      referralCode = localStorage.getItem(REFERRAL_CODE_STORAGE_KEY) ?? "";
+    } catch {
+      // Ignore — checkout just proceeds without a referral code.
+    }
+
     const res = await fetch("/api/checkout", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ plan }),
+      body: JSON.stringify({ plan, referralCode }),
     });
     const body = await res.json();
 
