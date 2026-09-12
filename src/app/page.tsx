@@ -1,5 +1,12 @@
 import Link from "next/link";
 import { Avatar } from "@/components/Avatar";
+import { HeroIllustration } from "@/components/illustrations/HeroIllustration";
+import { CategoryIllustration } from "@/components/illustrations/CategoryIllustration";
+import {
+  CATEGORY_DESCRIPTIONS,
+  CATEGORY_LABELS,
+  CATEGORY_ORDER,
+} from "@/lib/scenarios";
 
 const FEATURES = [
   {
@@ -35,6 +42,24 @@ const PERSONAS = [
   { name: "Morgan Lee", role: "新規クライアント" },
 ];
 
+const WHY_ENGLISH = [
+  {
+    title: "キャリアの選択肢が増える",
+    description:
+      "海外プロジェクトへの参加、グローバルチームでの評価、転職市場での見え方——英語で自分の意見を言えることは、任される仕事の範囲を直接広げます。",
+  },
+  {
+    title: "任される仕事の幅が広がる",
+    description:
+      "会議で臆せず発言できる、メールだけでなく口頭でも交渉できる。それだけで「この人になら任せられる」と思われる機会が増えます。",
+  },
+  {
+    title: "今日の一言が、明日の自信になる",
+    description:
+      "言えなかった一言が言えるようになる。その積み重ねが、次のチャンスに手を挙げる自信につながります。",
+  },
+];
+
 export default function Home() {
   return (
     <main>
@@ -43,33 +68,92 @@ export default function Home() {
           aria-hidden="true"
           className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[32rem] bg-[radial-gradient(ellipse_60%_50%_at_50%_-10%,var(--color-signal-tint),transparent)]"
         />
-        <div className="mx-auto max-w-3xl px-6 pt-24 pb-20 text-center sm:pt-32 sm:pb-28">
-          <span className="inline-flex items-center gap-2 text-xs font-medium tracking-[0.2em] text-signal uppercase">
-            <span className="h-px w-6 bg-signal" />
-            無料のシーンからお試しいただけます
-          </span>
-          <h1 className="mt-8 font-display text-4xl leading-[1.25] font-semibold text-ink sm:text-6xl sm:leading-[1.2]">
-            誰と話すかで、
-            <br />
-            英語は変わる。
-          </h1>
-          <p className="mx-auto mt-6 max-w-xl text-base leading-relaxed text-ink-soft sm:text-lg">
-            ビジトークは、CEOや海外の同僚、取引先など、実在しそうな相手役とシチュエーション別にリアルタイム音声で練習するAIビジネス英会話サービスです。会話のたびにAIコーチが弱点をフィードバックするから、話すほど着実に力がつきます。
-          </p>
-          <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
-            <Link
-              href="/conversation"
-              className="rounded-full bg-signal px-8 py-3.5 text-base font-medium text-paper shadow-sm transition hover:bg-signal-dim"
-            >
-              AIと話してみる(無料)
-            </Link>
-            <Link
-              href="/pricing"
-              className="rounded-full border border-line px-8 py-3.5 text-base font-medium text-ink transition hover:border-ink-faint"
-            >
-              料金プランを見る
-            </Link>
+        <div className="mx-auto grid max-w-6xl items-center gap-10 px-6 pt-20 pb-16 sm:pt-28 sm:pb-20 lg:grid-cols-[1.1fr_1fr] lg:gap-16">
+          <div className="text-center lg:text-left">
+            <span className="inline-flex items-center gap-2 text-xs font-medium tracking-[0.2em] text-signal uppercase">
+              <span className="h-px w-6 bg-signal" />
+              無料のシーンからお試しいただけます
+            </span>
+            <h1 className="mt-8 font-display text-4xl leading-[1.25] font-semibold text-ink sm:text-6xl sm:leading-[1.2]">
+              誰と話すかで、
+              <br />
+              英語は変わる。
+            </h1>
+            <p className="mx-auto mt-6 max-w-xl text-base leading-relaxed text-ink-soft sm:text-lg lg:mx-0">
+              ビジトークは、CEOや海外の同僚、取引先など、実在しそうな相手役とシチュエーション別にリアルタイム音声で練習するAIビジネス英会話サービスです。会話のたびにAIコーチが弱点をフィードバックするから、話すほど着実に力がつきます。
+            </p>
+            <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row lg:justify-start">
+              <Link
+                href="/conversation"
+                className="rounded-full bg-signal px-8 py-3.5 text-base font-medium text-paper shadow-sm transition hover:bg-signal-dim"
+              >
+                AIと話してみる(無料)
+              </Link>
+              <Link
+                href="/pricing"
+                className="rounded-full border border-line px-8 py-3.5 text-base font-medium text-ink transition hover:border-ink-faint"
+              >
+                料金プランを見る
+              </Link>
+            </div>
           </div>
+          <div className="mx-auto w-full max-w-md lg:max-w-none">
+            <HeroIllustration />
+          </div>
+        </div>
+      </section>
+
+      <section className="border-y border-line bg-ink">
+        <div className="mx-auto max-w-4xl px-6 py-16 text-center sm:py-20">
+          <p className="text-xs font-medium tracking-[0.25em] text-paper/60 uppercase">
+            Why English, why now
+          </p>
+          <h2 className="mx-auto mt-3 max-w-xl font-display text-2xl font-semibold text-paper sm:text-3xl">
+            英語は、キャリアと年収を動かす実務スキルです。
+          </h2>
+          <div className="mt-12 grid gap-6 text-left sm:grid-cols-3">
+            {WHY_ENGLISH.map((item) => (
+              <div key={item.title} className="rounded-2xl bg-paper/5 p-6">
+                <h3 className="font-display text-base font-semibold text-paper">
+                  {item.title}
+                </h3>
+                <p className="mt-2 text-sm leading-relaxed text-paper/70">
+                  {item.description}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="mx-auto max-w-5xl px-6 py-20 sm:py-24">
+        <div className="text-center">
+          <p className="text-xs font-medium tracking-[0.2em] text-signal uppercase">
+            Scenarios
+          </p>
+          <h2 className="mt-3 font-display text-2xl font-semibold text-ink sm:text-3xl">
+            4つのカテゴリーで、実践に近い英語を。
+          </h2>
+        </div>
+
+        <div className="mt-12 grid gap-5 sm:grid-cols-2">
+          {CATEGORY_ORDER.map((category) => (
+            <Link
+              key={category}
+              href="/conversation"
+              className="group flex items-start gap-4 rounded-2xl border border-line bg-surface p-6 transition hover:border-ink-faint"
+            >
+              <CategoryIllustration category={category} size={56} className="shrink-0" />
+              <div>
+                <h3 className="font-display font-semibold text-ink group-hover:text-signal">
+                  {CATEGORY_LABELS[category]}
+                </h3>
+                <p className="mt-1.5 text-sm leading-relaxed text-ink-soft">
+                  {CATEGORY_DESCRIPTIONS[category]}
+                </p>
+              </div>
+            </Link>
+          ))}
         </div>
       </section>
 
@@ -106,7 +190,7 @@ export default function Home() {
               話す前に、まず聞く力も鍛えたい方へ
             </h2>
             <p className="mt-2 max-w-xl text-sm leading-relaxed text-ink-soft">
-              スクリプト・単語・理解度テスト付きのビジネスリスニング教材もご用意しています。話す練習(AI会話)と聞く練習(リスニング)、それぞれ別のプランでご利用いただけます。
+              スクリプト・単語・理解度テスト付きのビジネスリスニング教材もご用意しています。話す練習(AI会話)と聞く練習(リスニング)、それぞれのプランでご利用いただけます。
             </p>
           </div>
           <Link

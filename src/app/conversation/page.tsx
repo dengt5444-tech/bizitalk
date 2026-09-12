@@ -2,6 +2,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser, isEntitled } from "@/lib/entitlements";
 import { Avatar } from "@/components/Avatar";
+import { CategoryIllustration } from "@/components/illustrations/CategoryIllustration";
 import {
   CATEGORY_DESCRIPTIONS,
   CATEGORY_LABELS,
@@ -60,15 +61,20 @@ export default async function ConversationPage() {
 
           return (
             <section key={category}>
-              <div className="mb-1 flex items-baseline gap-3 border-b border-line pb-3">
-                <h2 className="font-display text-xl font-semibold text-ink">
-                  {CATEGORY_LABELS[category]}
-                </h2>
-                <span className="text-sm text-ink-faint">{items.length}シーン</span>
+              <div className="mb-4 flex items-center gap-4 border-b border-line pb-4">
+                <CategoryIllustration category={category} size={48} className="shrink-0" />
+                <div>
+                  <div className="flex items-baseline gap-3">
+                    <h2 className="font-display text-xl font-semibold text-ink">
+                      {CATEGORY_LABELS[category]}
+                    </h2>
+                    <span className="text-sm text-ink-faint">{items.length}シーン</span>
+                  </div>
+                  <p className="mt-1 text-sm text-ink-soft">
+                    {CATEGORY_DESCRIPTIONS[category]}
+                  </p>
+                </div>
               </div>
-              <p className="mb-5 text-sm text-ink-soft">
-                {CATEGORY_DESCRIPTIONS[category]}
-              </p>
 
               <ul className="grid gap-4 sm:grid-cols-2">
                 {items.map((scenario) => {
