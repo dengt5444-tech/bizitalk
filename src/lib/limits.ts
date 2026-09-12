@@ -32,9 +32,9 @@ export const CONVERSATION_MINUTES_PER_MONTH: Record<ConversationPlan, number> = 
 };
 
 // Cap applied to logged-in users with no active subscription (trying the
-// one free scenario) — same as the trial tier's cap, as a simple anti-abuse
-// guard rather than a distinct business rule.
-export const FREE_MINUTES_PER_MONTH = CONVERSATION_MINUTES_PER_MONTH.trial;
+// one free scenario) — deliberately much smaller than any paid tier, just
+// enough to sample the experience before committing to a plan.
+export const FREE_MINUTES_PER_MONTH = 5;
 
 export function minutesCapFor(plan: ConversationPlan | "admin" | null): number | null {
   if (plan === "admin") return null;

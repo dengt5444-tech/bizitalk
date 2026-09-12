@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState, type FormEvent } from "react";
+import { Suspense, useEffect, useState, type FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
@@ -21,12 +21,34 @@ function LoginForm() {
   const [verifying, setVerifying] = useState(false);
   const [verifyError, setVerifyError] = useState("");
 
+  // If this browser already has a signed-in session, requesting a login for
+  // a DIFFERENT email must not silently leave the old session active behind
+  // it — otherwise a still-valid old session can make it look like the new
+  // email "didn't work" and the site just kept showing the old account.
+  const [loggedInEmail, setLoggedInEmail] = useState<string | null>(null);
+
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.auth.getUser().then(({ data }) => {
+      setLoggedInEmail(data.user?.email ?? null);
+    });
+  }, []);
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setStatus("sending");
     setErrorMessage("");
 
     const supabase = createClient();
+
+    // Switching to a different account in the same browser: sign out of
+    // the old session first so it can't linger and get mistaken for the
+    // new one after verification.
+    if (loggedInEmail && loggedInEmail.toLowerCase() !== email.trim().toLowerCase()) {
+      await supabase.auth.signOut();
+      setLoggedInEmail(null);
+    }
+
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: {
@@ -74,6 +96,13 @@ function LoginForm() {
         <p className="mt-2 text-sm text-ink-soft">
           メールアドレスを入力すると、ログイン用リンクをお送りします。
         </p>
+
+        {loggedInEmail && status === "idle" && (
+          <div className="mt-4 rounded-xl border border-line bg-paper-dim p-4 text-sm text-ink-soft">
+            現在 <span className="font-medium text-ink">{loggedInEmail}</span>{" "}
+            としてログイン中です。別のメールアドレスを入力すると、現在のセッションからログアウトしてから切り替えます。
+          </div>
+        )}
 
         {callbackError && (
           <div className="mt-4 rounded-xl border border-rose/30 bg-rose-tint p-4 text-sm text-rose">

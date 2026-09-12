@@ -50,6 +50,12 @@ export type QuizQuestion = {
 // detail pages give a visual sense of the situation before listening.
 // Anything not listed here falls back to "report" in the UI.
 export const MATERIAL_SCENES: Record<string, import("@/components/illustrations/SceneIllustration").SceneKey> = {
+  "introducing-yourself-to-a-new-coworker": "casual",
+  "scheduling-a-quick-call": "desk-call",
+  "asking-a-coworker-for-help": "casual",
+  "welcoming-a-visitor": "networking",
+  "giving-a-simple-status-update": "meeting",
+  "confirming-an-email": "desk-call",
   "job-interview": "interview",
   "business-meeting": "meeting",
   "salary-negotiation": "negotiation",
