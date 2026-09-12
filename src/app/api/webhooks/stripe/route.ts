@@ -12,6 +12,16 @@ function periodEnd(subscription: Stripe.Subscription): string | null {
   return timestamp ? new Date(timestamp * 1000).toISOString() : null;
 }
 
+// The listening plan and the AI conversation plan are separate Stripe
+// products with separate entitlement tables — the listening plan reuses
+// the shared Supabase project's own gakuto_subscriptions table (the same
+// one Bijirisu uses), so a subscription to one plan doesn't unlock the
+// other. Which table a given subscription belongs to is recorded in the
+// subscription's own metadata (set at checkout creation time).
+function tableForPlan(plan: string | undefined) {
+  return plan === "listening" ? "gakuto_subscriptions" : "subscriptions";
+}
+
 async function upsertFromSubscription(
   subscription: Stripe.Subscription,
   userId: string | undefined,
@@ -19,7 +29,7 @@ async function upsertFromSubscription(
   if (!userId) return;
 
   const admin = createAdminClient();
-  await admin.from("subscriptions").upsert(
+  await admin.from(tableForPlan(subscription.metadata?.plan)).upsert(
     {
       user_id: userId,
       stripe_customer_id:

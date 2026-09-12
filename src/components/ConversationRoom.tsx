@@ -407,8 +407,13 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
         setPhase("chatting");
         if (autoPlay) setTimeout(() => playAudio(0), 150);
       }
-    } catch {
-      setError("会話を開始できませんでした。もう一度お試しください。");
+    } catch (err) {
+      const code = err instanceof Error ? err.message : "";
+      setError(
+        code === "monthly_limit_reached"
+          ? "今月のAI会話の利用回数の上限に達しました。月が変わると再びご利用いただけます。"
+          : "会話を開始できませんでした。もう一度お試しください。",
+      );
       setPhase("idle");
     } finally {
       setStarting(false);

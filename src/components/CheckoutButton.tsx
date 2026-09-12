@@ -3,7 +3,20 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
-export function CheckoutButton({ isLoggedIn }: { isLoggedIn: boolean }) {
+type Plan = "conversation" | "listening";
+
+const PLAN_LABEL: Record<Plan, string> = {
+  conversation: "¥2,980で始める",
+  listening: "¥490で始める",
+};
+
+export function CheckoutButton({
+  isLoggedIn,
+  plan = "conversation",
+}: {
+  isLoggedIn: boolean;
+  plan?: Plan;
+}) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -17,7 +30,11 @@ export function CheckoutButton({ isLoggedIn }: { isLoggedIn: boolean }) {
     setLoading(true);
     setError("");
 
-    const res = await fetch("/api/checkout", { method: "POST" });
+    const res = await fetch("/api/checkout", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ plan }),
+    });
     const body = await res.json();
 
     if (!res.ok || !body.url) {
@@ -36,7 +53,7 @@ export function CheckoutButton({ isLoggedIn }: { isLoggedIn: boolean }) {
         disabled={loading}
         className="w-full rounded-full bg-signal px-6 py-3.5 text-base font-medium text-paper transition hover:bg-signal-dim disabled:opacity-50"
       >
-        {loading ? "処理中..." : "¥480で始める"}
+        {loading ? "処理中..." : PLAN_LABEL[plan]}
       </button>
       {error && <p className="mt-3 text-sm text-rose">{error}</p>}
     </div>

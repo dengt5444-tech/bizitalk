@@ -44,3 +44,26 @@ export async function isEntitled(
   if (isAdminEmail(user.email)) return true;
   return hasActiveSubscription(user.id);
 }
+
+// The listening (business-listening materials) plan is a separate product
+// from the AI conversation plan above, tracked in the shared Supabase
+// project's own gakuto_subscriptions table (the same table Bijirisu uses),
+// so a subscription to one plan doesn't unlock the other.
+export async function hasActiveListeningSubscription(userId: string) {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("gakuto_subscriptions")
+    .select("status")
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  return !!data && ACTIVE_STATUSES.has(data.status);
+}
+
+export async function isListeningEntitled(
+  user: { id: string; email?: string | null } | null | undefined,
+) {
+  if (!user) return false;
+  if (isAdminEmail(user.email)) return true;
+  return hasActiveListeningSubscription(user.id);
+}

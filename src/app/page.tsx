@@ -96,6 +96,28 @@ export default function Home() {
         </div>
       </section>
 
+      <section className="mx-auto max-w-4xl px-6 py-16 sm:py-20">
+        <div className="flex flex-col items-start gap-6 rounded-3xl border border-line bg-paper-dim p-8 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-xs font-medium tracking-[0.2em] text-amber-dim uppercase">
+              Listening
+            </p>
+            <h2 className="mt-2 font-display text-xl font-semibold text-ink sm:text-2xl">
+              話す前に、まず聞く力も鍛えたい方へ
+            </h2>
+            <p className="mt-2 max-w-xl text-sm leading-relaxed text-ink-soft">
+              スクリプト・単語・理解度テスト付きのビジネスリスニング教材もご用意しています。話す練習(AI会話)と聞く練習(リスニング)、それぞれ別のプランでご利用いただけます。
+            </p>
+          </div>
+          <Link
+            href="/materials"
+            className="shrink-0 rounded-full border border-line px-6 py-3 text-sm font-medium text-ink transition hover:border-ink-faint"
+          >
+            リスニング教材を見る →
+          </Link>
+        </div>
+      </section>
+
       <section className="mx-auto max-w-5xl px-6 py-20 sm:py-24">
         <div className="max-w-xl">
           <p className="text-xs font-medium tracking-[0.2em] text-signal uppercase">

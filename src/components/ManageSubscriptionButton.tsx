@@ -2,7 +2,11 @@
 
 import { useState } from "react";
 
-export function ManageSubscriptionButton() {
+export function ManageSubscriptionButton({
+  plan = "conversation",
+}: {
+  plan?: "conversation" | "listening";
+}) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -10,13 +14,17 @@ export function ManageSubscriptionButton() {
     setLoading(true);
     setError("");
 
-    const res = await fetch("/api/portal", { method: "POST" });
+    const res = await fetch("/api/portal", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ plan }),
+    });
     const body = await res.json();
 
     if (!res.ok || !body.url) {
       setError(
         body.error === "no_subscription"
-          ? "管理者権限で全シーンが有効になっています(Stripeでのお支払いはありません)。"
+          ? "管理者権限で有効になっています(Stripeでのお支払いはありません)。"
           : "管理画面を開けませんでした。時間をおいて再度お試しください。",
       );
       setLoading(false);

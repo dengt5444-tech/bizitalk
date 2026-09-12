@@ -22,6 +22,12 @@ export async function SiteHeader() {
           >
             会話練習
           </Link>
+          <Link
+            href="/materials"
+            className="rounded-full px-3 py-2 text-ink-soft transition hover:text-ink"
+          >
+            リスニング
+          </Link>
           {user && (
             <>
               <Link

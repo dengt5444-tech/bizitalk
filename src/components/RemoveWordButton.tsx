@@ -3,13 +3,23 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-export function RemoveWordButton({ id }: { id: string }) {
+export function RemoveWordButton({
+  id,
+  source = "conversation",
+}: {
+  id: string;
+  source?: "conversation" | "listening";
+}) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
 
   async function handleClick() {
     setLoading(true);
-    await fetch(`/api/review/words/${id}`, { method: "DELETE" });
+    const endpoint =
+      source === "listening"
+        ? `/api/review/listening-words/${id}`
+        : `/api/review/words/${id}`;
+    await fetch(endpoint, { method: "DELETE" });
     router.refresh();
   }
 

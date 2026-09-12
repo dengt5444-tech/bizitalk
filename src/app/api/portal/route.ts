@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createStripeClient } from "@/lib/stripe";
 
-export async function POST() {
+export async function POST(request: Request) {
   const supabase = await createClient();
   const {
     data: { user },
@@ -12,8 +12,11 @@ export async function POST() {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
+  const body = await request.json().catch(() => null);
+  const table = body?.plan === "listening" ? "gakuto_subscriptions" : "subscriptions";
+
   const { data: subscription } = await supabase
-    .from("subscriptions")
+    .from(table)
     .select("stripe_customer_id")
     .eq("user_id", user.id)
     .maybeSingle();

@@ -14,20 +14,38 @@ export default async function ReviewPage() {
   }
 
   const supabase = await createClient();
-  const { data: words } = await supabase
-    .from("saved_words")
-    .select("id, word, meaning, source_title, created_at")
-    .order("created_at", { ascending: false });
+  const [{ data: conversationWords }, { data: listeningWords }] =
+    await Promise.all([
+      supabase
+        .from("saved_words")
+        .select("id, word, meaning, source_title, created_at")
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("gakuto_saved_words")
+        .select("id, word, meaning, material_title, created_at")
+        .order("created_at", { ascending: false }),
+    ]);
 
-  const groups = new Map<
-    string,
-    { id: string; word: string; meaning: string }[]
-  >();
+  type ReviewWord = {
+    id: string;
+    word: string;
+    meaning: string;
+    source: "conversation" | "listening";
+  };
 
-  for (const w of words ?? []) {
-    const key = w.source_title || "その他";
+  const groups = new Map<string, ReviewWord[]>();
+
+  for (const w of conversationWords ?? []) {
+    const key = w.source_title || "AI会話";
     const list = groups.get(key) ?? [];
-    list.push({ id: w.id, word: w.word, meaning: w.meaning });
+    list.push({ id: w.id, word: w.word, meaning: w.meaning, source: "conversation" });
+    groups.set(key, list);
+  }
+
+  for (const w of listeningWords ?? []) {
+    const key = w.material_title || "リスニング教材";
+    const list = groups.get(key) ?? [];
+    list.push({ id: w.id, word: w.word, meaning: w.meaning, source: "listening" });
     groups.set(key, list);
   }
 
@@ -40,21 +58,29 @@ export default async function ReviewPage() {
         復習リスト
       </h1>
       <p className="mt-3 text-ink-soft">
-        AI会話のフィードバックで出てきた単語や表現をここでまとめて復習できます。
+        AI会話のフィードバックで出てきた単語や、リスニング教材の理解度テストで間違えた単語を、ここでまとめて復習できます。
       </p>
 
       {groups.size === 0 ? (
         <div className="mt-10 rounded-2xl border border-dashed border-line bg-paper-dim p-10 text-center">
           <p className="font-medium text-ink">保存された単語はまだありません</p>
           <p className="mt-2 text-sm text-ink-soft">
-            AI会話を終えたあと、フィードバックから「復習に追加」してみましょう。
+            AI会話を終えたあとのフィードバックや、教材の理解度テストから「復習に追加」してみましょう。
           </p>
-          <Link
-            href="/conversation"
-            className="mt-5 inline-block rounded-full bg-signal px-5 py-2.5 text-sm font-medium text-paper transition hover:bg-signal-dim"
-          >
-            会話練習へ
-          </Link>
+          <div className="mt-5 flex flex-wrap justify-center gap-3">
+            <Link
+              href="/conversation"
+              className="inline-block rounded-full bg-signal px-5 py-2.5 text-sm font-medium text-paper transition hover:bg-signal-dim"
+            >
+              会話練習へ
+            </Link>
+            <Link
+              href="/materials"
+              className="inline-block rounded-full border border-line px-5 py-2.5 text-sm font-medium text-ink transition hover:border-ink-faint"
+            >
+              教材一覧へ
+            </Link>
+          </div>
         </div>
       ) : (
         <div className="mt-8 space-y-8">
@@ -75,7 +101,7 @@ export default async function ReviewPage() {
                         <p className="text-sm text-ink-soft">{item.meaning}</p>
                       )}
                     </div>
-                    <RemoveWordButton id={item.id} />
+                    <RemoveWordButton id={item.id} source={item.source} />
                   </li>
                 ))}
               </ul>
