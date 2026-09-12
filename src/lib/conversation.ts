@@ -48,3 +48,26 @@ export type ConversationFeedback = {
 };
 
 export const MAX_TURNS_PER_SESSION = 16;
+
+// The one scenario where the learner picks (or skips) their own topic
+// instead of stepping into a fixed persona/situation.
+export const FREE_TALK_SLUG = "free-talk";
+export const CUSTOM_TOPIC_MAX_LENGTH = 200;
+
+export function freeTalkOpeningLine(
+  customTopic: string | null | undefined,
+  fallback: string,
+): string {
+  const topic = customTopic?.trim();
+  if (!topic) return fallback;
+  return `Hi there! I heard you'd like to talk about ${topic} today — I'd love to dive into that. What's on your mind about it?`;
+}
+
+export function withCustomTopic(
+  systemPrompt: string,
+  customTopic: string | null | undefined,
+): string {
+  const topic = customTopic?.trim();
+  if (!topic) return systemPrompt;
+  return `${systemPrompt}\n\nFor this specific session, the learner has said they'd like to talk about: "${topic}". Focus the conversation on this topic in a natural, engaged way, while still following the guidance above.`;
+}

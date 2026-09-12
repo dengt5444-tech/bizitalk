@@ -6,7 +6,11 @@ import type {
   ConversationFeedback,
   ConversationTurn,
 } from "@/lib/conversation";
-import { MAX_TURNS_PER_SESSION } from "@/lib/conversation";
+import {
+  CUSTOM_TOPIC_MAX_LENGTH,
+  FREE_TALK_SLUG,
+  MAX_TURNS_PER_SESSION,
+} from "@/lib/conversation";
 import { Avatar } from "@/components/Avatar";
 import { FeedbackPanel } from "@/components/FeedbackPanel";
 
@@ -115,6 +119,8 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
   const [messages, setMessages] = useState<ConversationTurn[]>([]);
   const [turnCount, setTurnCount] = useState(0);
   const [inputText, setInputText] = useState("");
+  const [customTopic, setCustomTopic] = useState("");
+  const isFreeTalk = scenario.slug === FREE_TALK_SLUG;
   const [starting, setStarting] = useState(false);
   const [sending, setSending] = useState(false);
   const [ending, setEnding] = useState(false);
@@ -381,7 +387,10 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
       const res = await fetch("/api/conversation/sessions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ scenarioSlug: scenario.slug }),
+        body: JSON.stringify({
+          scenarioSlug: scenario.slug,
+          ...(isFreeTalk ? { customTopic: customTopic.trim() } : {}),
+        }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error ?? "start_failed");
@@ -411,7 +420,7 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
       const code = err instanceof Error ? err.message : "";
       setError(
         code === "monthly_limit_reached"
-          ? "今月のAI会話の利用回数の上限に達しました。月が変わると再びご利用いただけます。"
+          ? "今月のAI会話の利用時間の上限に達しました。月が変わると再びご利用いただけます。"
           : "会話を開始できませんでした。もう一度お試しください。",
       );
       setPhase("idle");
@@ -549,9 +558,32 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
         <div className="p-6 text-center sm:p-8">
           <Avatar name={scenario.personaName} size="lg" className="mx-auto" />
           <p className="mt-4 text-sm text-ink-soft">
-            {scenario.personaName}さんと英語で会話してみましょう。
+            {isFreeTalk
+              ? "話したいテーマを下に入力するか、空欄のまま自由に会話を始めましょう。"
+              : `${scenario.personaName}さんと英語で会話してみましょう。`}
             会話が終わったら、AIコーチが良かった点・直すと良い表現をフィードバックします。
           </p>
+          {isFreeTalk && (
+            <div className="mx-auto mt-5 max-w-sm text-left">
+              <label
+                htmlFor="free-talk-topic"
+                className="text-xs font-medium text-ink-soft"
+              >
+                話したいテーマ(任意)
+              </label>
+              <textarea
+                id="free-talk-topic"
+                value={customTopic}
+                onChange={(event) =>
+                  setCustomTopic(event.target.value.slice(0, CUSTOM_TOPIC_MAX_LENGTH))
+                }
+                disabled={starting}
+                placeholder="例: 転職を考えている理由について話したい / 最近読んだビジネス書について / 特になし"
+                rows={2}
+                className="mt-1.5 w-full resize-none rounded-xl border border-line bg-paper px-3.5 py-2.5 text-sm text-ink placeholder:text-ink-faint focus:border-signal focus:outline-none disabled:cursor-not-allowed disabled:opacity-60"
+              />
+            </div>
+          )}
           <div className="mt-6 flex flex-col items-center gap-3">
             {supportsRealtime && (
               <button

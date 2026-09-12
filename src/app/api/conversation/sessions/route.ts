@@ -1,8 +1,13 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getConversationPlan } from "@/lib/entitlements";
-import { sessionsCapFor } from "@/lib/limits";
-import type { ConversationTurn } from "@/lib/conversation";
+import { minutesCapFor } from "@/lib/limits";
+import {
+  CUSTOM_TOPIC_MAX_LENGTH,
+  FREE_TALK_SLUG,
+  freeTalkOpeningLine,
+  type ConversationTurn,
+} from "@/lib/conversation";
 
 export async function POST(request: Request) {
   const supabase = await createClient();
@@ -39,19 +44,24 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "payment_required" }, { status: 403 });
   }
 
-  const cap = sessionsCapFor(plan);
-  if (cap !== null) {
+  const capMinutes = minutesCapFor(plan);
+  if (capMinutes !== null) {
     const startOfMonth = new Date();
     startOfMonth.setUTCDate(1);
     startOfMonth.setUTCHours(0, 0, 0, 0);
 
-    const { count } = await supabase
+    const { data: rows } = await supabase
       .from("conversation_sessions")
-      .select("id", { count: "exact", head: true })
+      .select("duration_seconds")
       .eq("user_id", user.id)
       .gte("created_at", startOfMonth.toISOString());
 
-    if ((count ?? 0) >= cap) {
+    const usedSeconds = (rows ?? []).reduce(
+      (sum, row) => sum + (row.duration_seconds ?? 0),
+      0,
+    );
+
+    if (usedSeconds >= capMinutes * 60) {
       return NextResponse.json(
         { error: "monthly_limit_reached" },
         { status: 429 },
@@ -59,8 +69,16 @@ export async function POST(request: Request) {
     }
   }
 
+  const customTopic =
+    scenario.slug === FREE_TALK_SLUG && typeof body?.customTopic === "string"
+      ? body.customTopic.trim().slice(0, CUSTOM_TOPIC_MAX_LENGTH)
+      : null;
+
   const transcript: ConversationTurn[] = [
-    { role: "assistant", text: scenario.opening_line },
+    {
+      role: "assistant",
+      text: freeTalkOpeningLine(customTopic, scenario.opening_line),
+    },
   ];
 
   const { data: session, error } = await supabase
@@ -71,6 +89,7 @@ export async function POST(request: Request) {
       voice: scenario.voice,
       transcript,
       turn_count: 0,
+      custom_topic: customTopic,
     })
     .select("id, transcript, status, turn_count")
     .single();

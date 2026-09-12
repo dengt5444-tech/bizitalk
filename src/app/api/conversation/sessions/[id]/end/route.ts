@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createOpenAIClient, FEEDBACK_MODEL } from "@/lib/openai";
+import { MAX_SESSION_DURATION_SECONDS } from "@/lib/limits";
 import type { ConversationFeedback, ConversationTurn } from "@/lib/conversation";
 
 const FEEDBACK_SYSTEM_PROMPT = `You are a meticulous, encouraging expert business-English coach for Japanese learners. You will be given the scenario context and a transcript of a roleplay conversation between the learner ("Learner") and an AI conversation partner ("Partner").
@@ -45,7 +46,7 @@ export async function POST(
   const { data: session } = await supabase
     .from("conversation_sessions")
     .select(
-      "id, transcript, status, turn_count, feedback, conversation_scenarios(title, description, persona_role)",
+      "id, transcript, status, turn_count, feedback, created_at, realtime_started_at, conversation_scenarios(title, description, persona_role)",
     )
     .eq("id", id)
     .eq("user_id", user.id)
@@ -112,11 +113,23 @@ export async function POST(
     return NextResponse.json({ error: "feedback_parse_failed" }, { status: 502 });
   }
 
+  // Duration counted against the monthly minutes cap: from when the
+  // realtime voice connection started (server-recorded, not client-reported)
+  // for a voice session, or from session creation for a text-only session.
+  // Clamped so a session left open unusually long doesn't eat an outsized
+  // share of the month's allowance.
+  const startedAt = session.realtime_started_at ?? session.created_at;
+  const durationSeconds = Math.min(
+    MAX_SESSION_DURATION_SECONDS,
+    Math.max(0, Math.round((Date.now() - new Date(startedAt).getTime()) / 1000)),
+  );
+
   const { error } = await supabase
     .from("conversation_sessions")
     .update({
       status: "completed",
       feedback,
+      duration_seconds: durationSeconds,
       ended_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     })

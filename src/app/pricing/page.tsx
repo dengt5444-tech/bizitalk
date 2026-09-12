@@ -5,7 +5,7 @@ import {
 } from "@/lib/entitlements";
 import { CheckoutButton } from "@/components/CheckoutButton";
 import { ManageSubscriptionButton } from "@/components/ManageSubscriptionButton";
-import { CONVERSATION_SESSIONS_PER_MONTH } from "@/lib/limits";
+import { CONVERSATION_MINUTES_PER_MONTH } from "@/lib/limits";
 
 export const dynamic = "force-dynamic";
 
@@ -26,9 +26,9 @@ const FAQ: { question: string; answer: string }[] = [
       "AI会話・リスニング教材とも、それぞれ無料のシーン・教材を1つずつご用意しています(利用にはログインが必要です)。それ以外は各プランへの登録が必要です。",
   },
   {
-    question: "AI英会話の回数に上限があるのはなぜですか?",
+    question: "AI英会話の時間に上限があるのはなぜですか?",
     answer:
-      "AI英会話はリアルタイムの音声AIを利用しており、1回の会話ごとに実際のAPI利用コストが発生します。安定してサービスを提供し続けるため、お試し・スタンダードプランは月あたりの回数を設けています。使い放題プランも、ごく一部の極端な利用を除き実質的に使い放題となる、十分に余裕を持った回数を設定しています。",
+      "AI英会話はリアルタイムの音声AIを利用しており、話した時間に応じて実際のAPI利用コストが発生します。安定してサービスを提供し続けるため、プランごとに月あたりの利用可能時間(分)を設けています。使い放題プランも、ごく一部の極端な利用を除き実質的に使い放題となる、十分に余裕を持った時間を設定しています。",
   },
   {
     question: "リスニング教材はどのプランでも使えますか?",
@@ -89,7 +89,7 @@ export default async function PricingPage() {
       price: "¥980",
       accent: "signal",
       features: [
-        `AI英会話を月${CONVERSATION_SESSIONS_PER_MONTH.trial}回まで練習`,
+        `AI英会話を月${CONVERSATION_MINUTES_PER_MONTH.trial}分まで練習`,
         "リスニング教材は聞き放題",
         "会話ごとのAIコーチによるフィードバック",
         "いつでも解約可能",
@@ -103,7 +103,7 @@ export default async function PricingPage() {
       price: "¥4,990",
       accent: "signal",
       features: [
-        `全26シーンでAI会話練習(月${CONVERSATION_SESSIONS_PER_MONTH.standard}回まで)`,
+        `全26シーンでAI会話練習(月${CONVERSATION_MINUTES_PER_MONTH.standard}分まで)`,
         "リスニング教材は聞き放題",
         "リアルタイム音声・AIコーチのフィードバック",
         "マイページでの進捗トラッキング",

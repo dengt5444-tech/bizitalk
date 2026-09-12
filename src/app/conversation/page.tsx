@@ -13,6 +13,7 @@ import {
   type ScenarioCategory,
   type ScenarioLevel,
 } from "@/lib/scenarios";
+import { FREE_TALK_SLUG } from "@/lib/conversation";
 
 export const dynamic = "force-dynamic";
 
@@ -33,11 +34,14 @@ export default async function ConversationPage() {
   // even for the free scenario.
   const loggedInAndEntitled = (isFree: boolean) => !!user && (isFree || subscribed);
 
+  const freeTalk = (scenarios ?? []).find((s) => s.slug === FREE_TALK_SLUG) ?? null;
+
   const groups = new Map<ScenarioCategory, NonNullable<typeof scenarios>>();
   for (const category of CATEGORY_ORDER) {
     groups.set(category, []);
   }
   for (const scenario of scenarios ?? []) {
+    if (scenario.slug === FREE_TALK_SLUG) continue;
     const category = (scenario.category as ScenarioCategory) ?? "teammates";
     const list = groups.get(category) ?? [];
     list.push(scenario);
@@ -55,6 +59,39 @@ export default async function ConversationPage() {
       <p className="mt-3 max-w-xl text-ink-soft">
         誰と、どんな場面で話すかで英語は変わります。CEOへの報告、海外の同僚との日々のやり取り、取引先との交渉——相手役ごとにキャラクター設定されたAIとリアルタイム音声で練習し、会話が終わるとAIコーチがフィードバックしてくれます。
       </p>
+
+      {freeTalk && (
+        <Link
+          href={`/conversation/${freeTalk.slug}`}
+          className="group mt-10 flex flex-col gap-5 overflow-hidden rounded-2xl border border-signal/30 bg-signal-tint p-6 transition hover:border-signal sm:flex-row sm:items-center"
+        >
+          <div className="relative h-28 w-full shrink-0 overflow-hidden rounded-xl sm:w-40">
+            <SceneIllustration
+              scene={SCENARIO_SCENES[freeTalk.slug] ?? "casual"}
+              className="transition duration-300 group-hover:scale-105"
+            />
+          </div>
+          <div className="flex-1">
+            <div className="flex items-center gap-2">
+              <Avatar name={freeTalk.persona_name} size="sm" />
+              <p className="font-display font-semibold text-ink group-hover:text-signal">
+                {freeTalk.title}
+              </p>
+              {!loggedInAndEntitled(freeTalk.is_free) && (
+                <span className="rounded-full bg-paper/90 px-2.5 py-1 text-xs font-medium text-ink-faint">
+                  ロック中
+                </span>
+              )}
+            </div>
+            <p className="mt-2 text-sm leading-relaxed text-ink-soft">
+              {freeTalk.description}
+            </p>
+          </div>
+          <p className="shrink-0 text-sm font-medium text-signal sm:self-center">
+            {loggedInAndEntitled(freeTalk.is_free) ? "話してみる →" : "詳細を見る →"}
+          </p>
+        </Link>
+      )}
 
       <div className="mt-12 space-y-14">
         {CATEGORY_ORDER.map((category) => {

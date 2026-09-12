@@ -43,6 +43,7 @@ export const CATEGORY_ORDER: ScenarioCategory[] = [
 // sense of the situation before starting. Anything not listed falls back
 // to "meeting" in the UI.
 export const SCENARIO_SCENES: Record<string, import("@/components/illustrations/SceneIllustration").SceneKey> = {
+  "free-talk": "casual",
   "small-talk-before-meeting": "casual",
   "lunch-invite": "casual",
   "office-tour-new-hire": "casual",

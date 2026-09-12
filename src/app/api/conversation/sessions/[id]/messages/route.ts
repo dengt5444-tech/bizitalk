@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createOpenAIClient, CHAT_MODEL } from "@/lib/openai";
-import { MAX_TURNS_PER_SESSION, type ConversationTurn } from "@/lib/conversation";
+import {
+  MAX_TURNS_PER_SESSION,
+  withCustomTopic,
+  type ConversationTurn,
+} from "@/lib/conversation";
 
 const SYSTEM_PROMPT_SUFFIX = `
 You are roleplaying as this character in a spoken business-English practice conversation with a Japanese learner.
@@ -33,7 +37,7 @@ export async function POST(
   const { data: session } = await supabase
     .from("conversation_sessions")
     .select(
-      "id, transcript, status, turn_count, conversation_scenarios(system_prompt, persona_name)",
+      "id, transcript, status, turn_count, custom_topic, conversation_scenarios(system_prompt, persona_name)",
     )
     .eq("id", id)
     .eq("user_id", user.id)
@@ -67,7 +71,10 @@ export async function POST(
     temperature: 0.8,
     max_tokens: 220,
     messages: [
-      { role: "system", content: `${scenario.system_prompt}\n${SYSTEM_PROMPT_SUFFIX}` },
+      {
+        role: "system",
+        content: `${withCustomTopic(scenario.system_prompt, session.custom_topic)}\n${SYSTEM_PROMPT_SUFFIX}`,
+      },
       ...transcript.map((turn) => ({
         role: turn.role,
         content: turn.text,

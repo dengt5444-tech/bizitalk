@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { REALTIME_MODEL } from "@/lib/openai";
+import { freeTalkOpeningLine, withCustomTopic } from "@/lib/conversation";
 
 const REALTIME_SYSTEM_SUFFIX = `
 This is a live, real-time SPOKEN conversation over voice, not a text chat. You can hear the learner and they can hear you.
@@ -28,7 +29,7 @@ export async function POST(
   const { data: session } = await supabase
     .from("conversation_sessions")
     .select(
-      "id, status, conversation_scenarios(system_prompt, opening_line, realtime_voice)",
+      "id, status, realtime_started_at, custom_topic, conversation_scenarios(system_prompt, opening_line, realtime_voice)",
     )
     .eq("id", id)
     .eq("user_id", user.id)
@@ -42,6 +43,17 @@ export async function POST(
     return NextResponse.json({ error: "session_ended" }, { status: 409 });
   }
 
+  // Recorded server-side (not trusted from the client) so the session's
+  // eventual duration can't be understated for the monthly minutes cap.
+  // Only set on the first token issuance for this session.
+  if (!session.realtime_started_at) {
+    await supabase
+      .from("conversation_sessions")
+      .update({ realtime_started_at: new Date().toISOString() })
+      .eq("id", id)
+      .eq("user_id", user.id);
+  }
+
   const scenario = Array.isArray(session.conversation_scenarios)
     ? session.conversation_scenarios[0]
     : session.conversation_scenarios;
@@ -50,7 +62,8 @@ export async function POST(
     return NextResponse.json({ error: "scenario_missing" }, { status: 500 });
   }
 
-  const instructions = `${scenario.system_prompt}\n${REALTIME_SYSTEM_SUFFIX.replace("{{OPENING_LINE}}", scenario.opening_line)}`;
+  const openingLine = freeTalkOpeningLine(session.custom_topic, scenario.opening_line);
+  const instructions = `${withCustomTopic(scenario.system_prompt, session.custom_topic)}\n${REALTIME_SYSTEM_SUFFIX.replace("{{OPENING_LINE}}", openingLine)}`;
   const safetyIdentifier = createHash("sha256").update(user.id).digest("hex");
 
   const response = await fetch("https://api.openai.com/v1/realtime/client_secrets", {

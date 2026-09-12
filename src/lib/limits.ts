@@ -3,10 +3,14 @@ import type { ConversationPlan } from "@/lib/entitlements";
 // AI conversation practice runs on OpenAI's realtime voice API, which has a
 // real, non-trivial per-minute cost (unlike the listening feature, whose
 // audio is generated once and cached, then reused for every listener at
-// near-zero marginal cost). A full 16-turn realtime session (this app's
-// per-session turn cap) costs roughly ¥250-300 in OpenAI usage at
-// published gpt-realtime rates ($32/1M audio input tokens, $64/1M audio
-// output tokens) — call it ¥280 as a conservative planning figure.
+// near-zero marginal cost). Published real-world gpt-realtime usage runs
+// roughly $0.06-$0.11/minute of talk time; call it $0.10/min (~¥16/min at
+// ~¥155/$) as a conservative planning figure.
+//
+// We cap usage by minutes of conversation per month rather than by session
+// count, so a plan reads simply as "talk for up to N minutes a month" and
+// usage tracks actual cost far more directly than a fixed per-session turn
+// budget did.
 //
 // Each cap below is sized so the tier stays profitable after Stripe's fee
 // (~3.6%) even in the worst case where every subscriber came in through
@@ -17,23 +21,29 @@ import type { ConversationPlan } from "@/lib/entitlements";
 // production traffic — they're conservative starting estimates, not
 // permanent constants.
 //
-//   trial      (¥980):   980 - ¥35 Stripe fee                    = ¥945 budget  -> 2 sessions/mo (¥560, ~41% margin)
-//   standard (¥4,990): 4,990 - ¥180 Stripe fee - ¥1,000 referral  = ¥3,810 budget -> 12 sessions/mo (¥3,360, ~12% margin)
-//   unlimited(¥9,900): 9,900 - ¥356 Stripe fee - ¥1,000 referral  = ¥8,544 budget -> 28 sessions/mo (¥7,840, ~8% margin;
+//   trial      (¥980):   980 - ¥35 Stripe fee                     = ¥945 budget  -> 45分/月  (¥720, ~24% margin)
+//   standard (¥4,990): 4,990 - ¥180 Stripe fee - ¥1,000 referral   = ¥3,810 budget -> 200分/月 (¥3,200, ~16% margin)
+//   unlimited(¥9,900): 9,900 - ¥356 Stripe fee - ¥1,000 referral   = ¥8,544 budget -> 450分/月 (¥7,200, ~16% margin;
 //                      framed to users as a generous fair-use ceiling, not a headline limit, since the plan is sold as "使い放題")
-export const CONVERSATION_SESSIONS_PER_MONTH: Record<ConversationPlan, number> = {
-  trial: 2,
-  standard: 12,
-  unlimited: 28,
+export const CONVERSATION_MINUTES_PER_MONTH: Record<ConversationPlan, number> = {
+  trial: 45,
+  standard: 200,
+  unlimited: 450,
 };
 
 // Cap applied to logged-in users with no active subscription (trying the
 // one free scenario) — same as the trial tier's cap, as a simple anti-abuse
 // guard rather than a distinct business rule.
-export const FREE_SESSIONS_PER_MONTH = CONVERSATION_SESSIONS_PER_MONTH.trial;
+export const FREE_MINUTES_PER_MONTH = CONVERSATION_MINUTES_PER_MONTH.trial;
 
-export function sessionsCapFor(plan: ConversationPlan | "admin" | null): number | null {
+export function minutesCapFor(plan: ConversationPlan | "admin" | null): number | null {
   if (plan === "admin") return null;
-  if (plan === null) return FREE_SESSIONS_PER_MONTH;
-  return CONVERSATION_SESSIONS_PER_MONTH[plan];
+  if (plan === null) return FREE_MINUTES_PER_MONTH;
+  return CONVERSATION_MINUTES_PER_MONTH[plan];
 }
+
+// Safety ceiling on how much duration a single session can contribute to a
+// user's monthly total, in case a realtime connection or tab is left open
+// far longer than an actual conversation would run — keeps one forgotten
+// tab from consuming an outsized chunk (or all) of the month's allowance.
+export const MAX_SESSION_DURATION_SECONDS = 30 * 60;

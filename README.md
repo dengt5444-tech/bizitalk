@@ -11,19 +11,20 @@ CEO、海外の同僚、取引先——相手役・シチュエーション別�
 | プラン | 価格 | 内容 |
 | --- | --- | --- |
 | リスニング | ¥490 | リスニング教材が聞き放題(AI会話は不可) |
-| お試し | ¥980 | AI会話 月`trial`回 + リスニング聞き放題 |
-| スタンダード | ¥4,990 | AI会話 月`standard`回 + リスニング聞き放題 |
-| 使い放題 | ¥9,900 | AI会話 実質使い放題(`unlimited`回/月の余裕あるフェアユース上限)+ リスニング聞き放題 |
+| お試し | ¥980 | AI会話 月`trial`分 + リスニング聞き放題 |
+| スタンダード | ¥4,990 | AI会話 月`standard`分 + リスニング聞き放題 |
+| 使い放題 | ¥9,900 | AI会話 実質使い放題(`unlimited`分/月の余裕あるフェアユース上限)+ リスニング聞き放題 |
 
-回数の実値は `src/lib/limits.ts` の `CONVERSATION_SESSIONS_PER_MONTH` 参照。リスニングは全プラン(リスニング単体プランおよびAI会話3プランいずれか)で利用可能。
+分数の実値は `src/lib/limits.ts` の `CONVERSATION_MINUTES_PER_MONTH` 参照。リスニングは全プラン(リスニング単体プランおよびAI会話3プランいずれか)で利用可能。
 
 ## 構成
 
 - **認証**: Supabase Auth(マジックリンク + 6桁コードのフォールバック)
-- **AI会話練習**: 4カテゴリー・全26シーン(`conversation_scenarios`)
+- **AI会話練習**: 4カテゴリー・全26シーン + フリートークモード(`conversation_scenarios`)
   - 同僚・日常 / 海外の同僚(インド・シンガポール・イギリス・オーストラリア・ドイツ) / 顧客・取引先 / 経営陣・上司(CEO・CFO)
+  - **フリートーク**: 固定のシーン・相手役ではなく、話したいテーマを自分で指定して(空欄でもOK)AIと自由形式の会話を練習できるモード。指定したテーマは `conversation_sessions.custom_topic` に保存し、テキストモードの返信生成・リアルタイム音声の指示・冒頭の挨拶いずれにも反映(`src/lib/conversation.ts` の `withCustomTopic` / `freeTalkOpeningLine`)。テーマ未指定の場合はAIが幅広いビジネス系の話題を提案します。
   - 対応ブラウザでは OpenAI Realtime API(WebRTC, `gpt-realtime`)でマイク⇄AIの低遅延な音声対話を行い、未対応ブラウザ/接続失敗時はテキストのターン制チャットにフォールバック
-  - 会話は `conversation_sessions` に保存。**プランごとに月あたりのセッション数に上限あり**(`src/lib/limits.ts`)。リアルタイム音声APIには実コストがかかるため、各プランの割引価格でも赤字にならないよう設定した安全マージン付きの上限。どのAI会話プランに入っているかは、本アプリの `subscriptions` テーブルに保存された `price_id` がどの環境変数の価格と一致するかで判定(`src/lib/entitlements.ts` の `getConversationPlan`)
+  - 会話は `conversation_sessions` に保存。**プランごとに月あたりの利用時間(分)に上限あり**(`src/lib/limits.ts`)。セッション数ではなく実際に話した分数で上限を管理しており、リアルタイム音声の接続開始時刻をサーバー側で記録して(クライアント申告ではなく)会話終了時に利用時間を算出・積算する仕組み。リアルタイム音声APIには実コストがかかるため、各プランの割引価格でも赤字にならないよう設定した安全マージン付きの上限。どのAI会話プランに入っているかは、本アプリの `subscriptions` テーブルに保存された `price_id` がどの環境変数の価格と一致するかで判定(`src/lib/entitlements.ts` の `getConversationPlan`)
 - **フィードバック**: 会話終了時、`gpt-4o` が文法・語彙・丁寧さのスコアと添削・語彙提案を生成。実発話由来のフィラー(um, uhなど)を誤って指摘しないようガードしたプロンプトを使用
 - **マイページ**(`/dashboard`): 継続日数・週間会話数・フルエンシースコアの推移・保存単語数、次におすすめのシーン
 - **会話の記録**(`/conversation/history`): 過去の会話とAIフィードバックをいつでも見返せる
@@ -69,14 +70,14 @@ npm run dev
 
 ### 初回セットアップ
 
-1. Supabaseプロジェクトを作成し、SQL Editorで `supabase/migrations/0001_init.sql` → `0002_vocab_decks.sql` の順に実行
+1. Supabaseプロジェクトを作成し、SQL Editorで `supabase/migrations/0001_init.sql` → `0002_vocab_decks.sql` → `0003_conversation_minutes.sql` → `0004_free_talk.sql` の順に実行
 2. 以下のスクリプトを実行(`NEXT_PUBLIC_SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` を環境変数として読み込みます)
 
 ```bash
 # Supabase Storage に音声キャッシュ用バケットを作成
 node scripts/setup-storage.mjs
 
-# AI会話練習のシーンを投入(全26シーン)
+# AI会話練習のシーンを投入(全26シーン + フリートーク)
 node scripts/seed-conversation-scenarios.mjs
 
 # 単語帳を投入
