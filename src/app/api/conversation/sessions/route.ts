@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { isAdminEmail, isEntitled } from "@/lib/entitlements";
-import { MAX_CONVERSATION_SESSIONS_PER_MONTH } from "@/lib/limits";
+import { getConversationPlan } from "@/lib/entitlements";
+import { sessionsCapFor } from "@/lib/limits";
 import type { ConversationTurn } from "@/lib/conversation";
 
 export async function POST(request: Request) {
@@ -21,25 +21,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "invalid_scenario" }, { status: 400 });
   }
 
-  if (!isAdminEmail(user.email)) {
-    const startOfMonth = new Date();
-    startOfMonth.setUTCDate(1);
-    startOfMonth.setUTCHours(0, 0, 0, 0);
-
-    const { count } = await supabase
-      .from("conversation_sessions")
-      .select("id", { count: "exact", head: true })
-      .eq("user_id", user.id)
-      .gte("created_at", startOfMonth.toISOString());
-
-    if ((count ?? 0) >= MAX_CONVERSATION_SESSIONS_PER_MONTH) {
-      return NextResponse.json(
-        { error: "monthly_limit_reached" },
-        { status: 429 },
-      );
-    }
-  }
-
   const { data: scenario } = await supabase
     .from("conversation_scenarios")
     .select(
@@ -52,8 +33,30 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "not_found" }, { status: 404 });
   }
 
-  if (!scenario.is_free && !(await isEntitled(user))) {
+  const plan = await getConversationPlan(user);
+
+  if (!scenario.is_free && plan === null) {
     return NextResponse.json({ error: "payment_required" }, { status: 403 });
+  }
+
+  const cap = sessionsCapFor(plan);
+  if (cap !== null) {
+    const startOfMonth = new Date();
+    startOfMonth.setUTCDate(1);
+    startOfMonth.setUTCHours(0, 0, 0, 0);
+
+    const { count } = await supabase
+      .from("conversation_sessions")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", user.id)
+      .gte("created_at", startOfMonth.toISOString());
+
+    if ((count ?? 0) >= cap) {
+      return NextResponse.json(
+        { error: "monthly_limit_reached" },
+        { status: 429 },
+      );
+    }
   }
 
   const transcript: ConversationTurn[] = [

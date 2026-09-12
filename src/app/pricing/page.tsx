@@ -1,11 +1,11 @@
 import {
+  getConversationPlan,
   getCurrentUser,
-  isEntitled,
   isListeningEntitled,
 } from "@/lib/entitlements";
 import { CheckoutButton } from "@/components/CheckoutButton";
 import { ManageSubscriptionButton } from "@/components/ManageSubscriptionButton";
-import { MAX_CONVERSATION_SESSIONS_PER_MONTH } from "@/lib/limits";
+import { CONVERSATION_SESSIONS_PER_MONTH } from "@/lib/limits";
 
 export const dynamic = "force-dynamic";
 
@@ -26,25 +26,106 @@ const FAQ: { question: string; answer: string }[] = [
       "AI会話・リスニング教材とも、それぞれ無料のシーン・教材を1つずつご用意しています(利用にはログインが必要です)。それ以外は各プランへの登録が必要です。",
   },
   {
-    question: "AI英会話に回数制限があるのはなぜですか?",
-    answer: `AI英会話はリアルタイムの音声AIを利用しており、1回の会話ごとに実際のAPI利用コストが発生します。安定してサービスを提供し続けるため、AI英会話プランは月${MAX_CONVERSATION_SESSIONS_PER_MONTH}回までとさせていただいています。リスニング教材は音声を一度生成して使い回す仕組みのため、聞き放題でご利用いただけます。`,
+    question: "AI英会話の回数に上限があるのはなぜですか?",
+    answer:
+      "AI英会話はリアルタイムの音声AIを利用しており、1回の会話ごとに実際のAPI利用コストが発生します。安定してサービスを提供し続けるため、お試し・スタンダードプランは月あたりの回数を設けています。使い放題プランも、ごく一部の極端な利用を除き実質的に使い放題となる、十分に余裕を持った回数を設定しています。",
   },
   {
-    question: "料金は今後変わりますか?",
+    question: "リスニング教材はどのプランでも使えますか?",
     answer:
-      "現在はどちらのプランもサービス開始記念の特別価格でご提供しています。将来的に通常価格へ変更する可能性があり、その際は事前にお知らせします。",
+      "リスニングプランのほか、お試し・スタンダード・使い放題プランのいずれかにご登録いただいても、リスニング教材は聞き放題でご利用いただけます。",
   },
 ];
 
+type PlanCard = {
+  key: "listening" | "trial" | "standard" | "unlimited";
+  badge: string;
+  name: string;
+  originalPrice: string;
+  price: string;
+  accent: "amber" | "signal";
+  features: string[];
+};
+
 export default async function PricingPage() {
   const user = await getCurrentUser();
-  const [conversationSubscribed, listeningSubscribed] = await Promise.all([
-    isEntitled(user),
+  const [conversationPlan, listeningSubscribed] = await Promise.all([
+    getConversationPlan(user),
     isListeningEntitled(user),
   ]);
 
+  const plans: PlanCard[] = [
+    {
+      key: "listening",
+      badge: "期間限定デモ価格",
+      name: "リスニングプラン",
+      originalPrice: "¥1,980",
+      price: "¥490",
+      accent: "amber",
+      features: [
+        "全教材が聞き放題",
+        "スクリプト・単語リスト付き",
+        "理解度テストと単語復習リスト",
+        "いつでも解約可能",
+      ],
+    },
+    {
+      key: "trial",
+      badge: "お試し",
+      name: "お試しプラン",
+      originalPrice: "",
+      price: "¥980",
+      accent: "signal",
+      features: [
+        `AI英会話を月${CONVERSATION_SESSIONS_PER_MONTH.trial}回まで練習`,
+        "リスニング教材は聞き放題",
+        "会話ごとのAIコーチによるフィードバック",
+        "いつでも解約可能",
+      ],
+    },
+    {
+      key: "standard",
+      badge: "期間限定デモ価格",
+      name: "スタンダードプラン",
+      originalPrice: "",
+      price: "¥4,990",
+      accent: "signal",
+      features: [
+        `全18シーンでAI会話練習(月${CONVERSATION_SESSIONS_PER_MONTH.standard}回まで)`,
+        "リスニング教材は聞き放題",
+        "リアルタイム音声・AIコーチのフィードバック",
+        "マイページでの進捗トラッキング",
+        "いつでも解約可能",
+      ],
+    },
+    {
+      key: "unlimited",
+      badge: "使い放題",
+      name: "AI英会話使い放題プラン",
+      originalPrice: "",
+      price: "¥9,900",
+      accent: "signal",
+      features: [
+        "AI英会話が実質使い放題",
+        "リスニング教材は聞き放題",
+        "リアルタイム音声・AIコーチのフィードバック",
+        "マイページでの進捗トラッキング",
+        "いつでも解約可能",
+      ],
+    },
+  ];
+
+  const isCurrentPlan = (key: PlanCard["key"]) => {
+    if (key === "listening") {
+      // Bundled into every AI tier too, but "current plan" here means the
+      // standalone listening purchase specifically.
+      return listeningSubscribed && conversationPlan === null;
+    }
+    return conversationPlan === key;
+  };
+
   return (
-    <main className="mx-auto max-w-4xl px-6 py-14 sm:py-20">
+    <main className="mx-auto max-w-5xl px-6 py-14 sm:py-20">
       <div className="text-center">
         <p className="text-xs font-medium tracking-[0.2em] text-signal uppercase">
           Pricing
@@ -53,111 +134,66 @@ export default async function PricingPage() {
           料金プラン
         </h1>
         <p className="mx-auto mt-3 max-w-xl text-ink-soft">
-          話す練習(AI英会話)と聞く練習(リスニング)、それぞれ別のプランでご利用いただけます。両方登録することも、どちらか一方だけご利用いただくことも可能です。
+          話す練習(AI英会話)と聞く練習(リスニング)、それぞれのペースに合わせて選べる4つのプランをご用意しています。
         </p>
       </div>
 
       <div className="mt-10 grid gap-6 sm:grid-cols-2">
-        <div className="rounded-3xl border border-line bg-surface p-8 text-center">
-          <span className="inline-block rounded-full bg-amber-tint px-4 py-1.5 text-xs font-semibold text-amber-dim">
-            期間限定デモ価格
-          </span>
+        {plans.map((plan) => {
+          const accentText = plan.accent === "amber" ? "text-amber-dim" : "text-signal";
+          const accentTint = plan.accent === "amber" ? "bg-amber-tint" : "bg-signal-tint";
+          const accentTintText = plan.accent === "amber" ? "text-amber-dim" : "text-signal-dim";
+          const current = isCurrentPlan(plan.key);
 
-          <p className="mt-4 text-sm font-medium text-ink-soft">
-            リスニングプラン
-          </p>
+          return (
+            <div
+              key={plan.key}
+              className="rounded-3xl border border-line bg-surface p-8 text-center"
+            >
+              <span className={`inline-block rounded-full ${accentTint} px-4 py-1.5 text-xs font-semibold ${accentTintText}`}>
+                {plan.badge}
+              </span>
 
-          <div className="mt-2 flex items-end justify-center gap-3">
-            <span className="text-xl font-medium text-ink-faint line-through">
-              ¥1,980
-            </span>
-            <span className="font-display text-4xl font-semibold text-ink">
-              ¥490
-            </span>
-            <span className="text-sm text-ink-soft">/月</span>
-          </div>
+              <p className="mt-4 text-sm font-medium text-ink-soft">{plan.name}</p>
 
-          <ul className="mt-7 space-y-2.5 text-left text-sm text-ink-soft">
-            <li className="flex items-center gap-2.5">
-              <span className="text-amber-dim">✓</span>全教材が聞き放題
-            </li>
-            <li className="flex items-center gap-2.5">
-              <span className="text-amber-dim">✓</span>スクリプト・単語リスト付き
-            </li>
-            <li className="flex items-center gap-2.5">
-              <span className="text-amber-dim">✓</span>理解度テストと単語復習リスト
-            </li>
-            <li className="flex items-center gap-2.5">
-              <span className="text-amber-dim">✓</span>いつでも解約可能
-            </li>
-          </ul>
-
-          <div className="mt-8">
-            {listeningSubscribed ? (
-              <div className="space-y-3">
-                <p className="rounded-full bg-amber-tint px-4 py-3 text-sm font-semibold text-amber-dim">
-                  現在ご登録中です
-                </p>
-                <ManageSubscriptionButton plan="listening" />
+              <div className="mt-2 flex items-end justify-center gap-3">
+                {plan.originalPrice && (
+                  <span className="text-xl font-medium text-ink-faint line-through">
+                    {plan.originalPrice}
+                  </span>
+                )}
+                <span className="font-display text-4xl font-semibold text-ink">
+                  {plan.price}
+                </span>
+                <span className="text-sm text-ink-soft">/月</span>
               </div>
-            ) : (
-              <CheckoutButton isLoggedIn={!!user} plan="listening" />
-            )}
-          </div>
-        </div>
 
-        <div className="rounded-3xl border border-line bg-surface p-8 text-center">
-          <span className="inline-block rounded-full bg-signal-tint px-4 py-1.5 text-xs font-semibold text-signal-dim">
-            期間限定デモ価格
-          </span>
+              <ul className="mt-7 space-y-2.5 text-left text-sm text-ink-soft">
+                {plan.features.map((feature) => (
+                  <li key={feature} className="flex items-center gap-2.5">
+                    <span className={accentText}>✓</span>
+                    {feature}
+                  </li>
+                ))}
+              </ul>
 
-          <p className="mt-4 text-sm font-medium text-ink-soft">
-            AI英会話プラン
-          </p>
-
-          <div className="mt-2 flex items-end justify-center gap-3">
-            <span className="text-xl font-medium text-ink-faint line-through">
-              ¥4,980
-            </span>
-            <span className="font-display text-4xl font-semibold text-ink">
-              ¥2,980
-            </span>
-            <span className="text-sm text-ink-soft">/月</span>
-          </div>
-
-          <ul className="mt-7 space-y-2.5 text-left text-sm text-ink-soft">
-            <li className="flex items-center gap-2.5">
-              <span className="text-signal">✓</span>
-              全18シーンでAI会話練習(月{MAX_CONVERSATION_SESSIONS_PER_MONTH}
-              回まで)
-            </li>
-            <li className="flex items-center gap-2.5">
-              <span className="text-signal">✓</span>リアルタイム音声で会話
-            </li>
-            <li className="flex items-center gap-2.5">
-              <span className="text-signal">✓</span>会話ごとのAIコーチによるフィードバック
-            </li>
-            <li className="flex items-center gap-2.5">
-              <span className="text-signal">✓</span>マイページでの進捗トラッキング
-            </li>
-            <li className="flex items-center gap-2.5">
-              <span className="text-signal">✓</span>いつでも解約可能
-            </li>
-          </ul>
-
-          <div className="mt-8">
-            {conversationSubscribed ? (
-              <div className="space-y-3">
-                <p className="rounded-full bg-signal-tint px-4 py-3 text-sm font-semibold text-signal-dim">
-                  現在ご登録中です
-                </p>
-                <ManageSubscriptionButton plan="conversation" />
+              <div className="mt-8">
+                {current ? (
+                  <div className="space-y-3">
+                    <p className={`rounded-full ${accentTint} px-4 py-3 text-sm font-semibold ${accentTintText}`}>
+                      現在ご登録中です
+                    </p>
+                    <ManageSubscriptionButton
+                      plan={plan.key === "listening" ? "listening" : "conversation"}
+                    />
+                  </div>
+                ) : (
+                  <CheckoutButton isLoggedIn={!!user} plan={plan.key} />
+                )}
               </div>
-            ) : (
-              <CheckoutButton isLoggedIn={!!user} plan="conversation" />
-            )}
-          </div>
-        </div>
+            </div>
+          );
+        })}
       </div>
 
       <div className="mt-16">

@@ -3,16 +3,18 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
-type Plan = "conversation" | "listening";
+type Plan = "listening" | "trial" | "standard" | "unlimited";
 
 const PLAN_LABEL: Record<Plan, string> = {
-  conversation: "¥2,980で始める",
   listening: "¥490で始める",
+  trial: "¥980で始める",
+  standard: "¥4,990で始める",
+  unlimited: "¥9,900で始める",
 };
 
 export function CheckoutButton({
   isLoggedIn,
-  plan = "conversation",
+  plan = "standard",
 }: {
   isLoggedIn: boolean;
   plan?: Plan;
