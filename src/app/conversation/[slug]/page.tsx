@@ -18,7 +18,7 @@ export default async function ConversationScenarioPage({
   const { data: scenario } = await supabase
     .from("conversation_scenarios")
     .select(
-      "id, slug, title, description, category, level, persona_name, persona_role, persona_background, is_free",
+      "id, slug, title, description, category, level, persona_name, persona_role, persona_background, opening_line, is_free",
     )
     .eq("slug", slug)
     .maybeSingle();
@@ -80,6 +80,7 @@ export default async function ConversationScenarioPage({
               title: scenario.title,
               personaName: scenario.persona_name,
               personaRole: scenario.persona_role,
+              openingLine: scenario.opening_line,
             }}
           />
         ) : (

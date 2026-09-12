@@ -15,6 +15,7 @@ type ScenarioInfo = {
   title: string;
   personaName: string;
   personaRole: string;
+  openingLine: string;
 };
 
 type Phase = "idle" | "connecting" | "chatting" | "ended";
@@ -138,6 +139,12 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
   const pcRef = useRef<RTCPeerConnection | null>(null);
   const dcRef = useRef<RTCDataChannel | null>(null);
   const micStreamRef = useRef<MediaStream | null>(null);
+  // The session is created with a seeded opening-line message already shown
+  // on screen (so it renders instantly, without waiting on the model). The
+  // realtime API is then asked to actually speak that same line; this flag
+  // makes the first assistant turn it produces replace that placeholder
+  // instead of appending a duplicate second copy of the opening line.
+  const openingHandledRef = useRef(false);
 
   const supportsRealtime = useSyncExternalStore(
     noopSubscribe,
@@ -183,8 +190,8 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
   }
 
   function syncTranscript(transcript: ConversationTurn[], nextTurnCount: number) {
-    if (!sessionId) return;
-    fetch(`/api/conversation/sessions/${sessionId}/sync-transcript`, {
+    if (!sessionId) return Promise.resolve();
+    return fetch(`/api/conversation/sessions/${sessionId}/sync-transcript`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ transcript, turnCount: nextTurnCount }),
@@ -199,8 +206,24 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
       if (processedIdsRef.current.has(itemId)) return;
       processedIdsRef.current.add(itemId);
     }
-    const next = pushTurn({ role, text });
-    const nextTurnCount = next.filter((m) => m.role === "assistant").length;
+
+    let next: ConversationTurn[];
+    if (role === "assistant" && !openingHandledRef.current) {
+      openingHandledRef.current = true;
+      next = [...transcriptRef.current];
+      next[0] = { role: "assistant", text };
+      transcriptRef.current = next;
+      setMessages(next);
+    } else {
+      next = pushTurn({ role, text });
+    }
+
+    // The seeded opening line (index 0) is display-only and isn't counted
+    // as a turn in text mode either, so subtract it back out here.
+    const nextTurnCount = Math.max(
+      0,
+      next.filter((m) => m.role === "assistant").length - 1,
+    );
     setTurnCount(nextTurnCount);
     syncTranscript(next, nextTurnCount);
     if (nextTurnCount >= MAX_TURNS_PER_SESSION) {
@@ -312,7 +335,14 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
 
     dc.onopen = () => {
       try {
-        dc.send(JSON.stringify({ type: "response.create" }));
+        dc.send(
+          JSON.stringify({
+            type: "response.create",
+            response: {
+              instructions: `Say this exact line out loud as your opening, naturally, with nothing added before or after it: "${scenario.openingLine}"`,
+            },
+          }),
+        );
       } catch {
         // ignore
       }
@@ -346,6 +376,7 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
     setStarting(true);
     setError(null);
     setMode(chosenMode);
+    openingHandledRef.current = false;
     try {
       const res = await fetch("/api/conversation/sessions", {
         method: "POST",
@@ -466,6 +497,15 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
     setError(null);
     closeRealtimeConnection();
     try {
+      // Turns from realtime mode are synced to the server in the background
+      // (fire-and-forget) as they happen, so the last one may still be in
+      // flight. Flush it and wait for it to land before asking the feedback
+      // endpoint to read the transcript back, or it can see a stale
+      // turn_count and refuse ("not enough turns") even though the
+      // conversation just happened.
+      if (mode === "realtime") {
+        await syncTranscript(transcriptRef.current, turnCount);
+      }
       const res = await fetch(`/api/conversation/sessions/${sessionId}/end`, {
         method: "POST",
       });
@@ -484,6 +524,7 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
   function handleRestart() {
     closeRealtimeConnection();
     processedIdsRef.current = new Set();
+    openingHandledRef.current = false;
     transcriptRef.current = [];
     setPhase("idle");
     setMode(null);
