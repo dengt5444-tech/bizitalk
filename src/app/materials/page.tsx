@@ -73,31 +73,36 @@ export default async function MaterialsPage() {
                     <li key={material.id}>
                       <Link
                         href={`/materials/${material.slug}`}
-                        className="group flex h-full flex-col justify-between rounded-2xl border border-line bg-surface p-5 transition hover:border-ink-faint"
+                        className="group flex h-full flex-col overflow-hidden rounded-2xl border border-line bg-surface transition hover:border-ink-faint"
                       >
-                        <div>
-                          <div className="flex items-center justify-between">
-                            <SceneIllustration scene={scene} pixelSize={44} />
-                            {material.is_free ? (
-                              <span className="rounded-full bg-amber-tint px-2.5 py-1 text-xs font-semibold text-amber-dim">
-                                無料
-                              </span>
-                            ) : !unlocked ? (
-                              <span className="rounded-full bg-paper-dim px-2.5 py-1 text-xs font-medium text-ink-faint">
-                                ロック中
-                              </span>
-                            ) : null}
+                        <div className="relative h-32 w-full overflow-hidden">
+                          <SceneIllustration
+                            scene={scene}
+                            className="transition duration-300 group-hover:scale-105"
+                          />
+                          {material.is_free ? (
+                            <span className="absolute top-3 right-3 rounded-full bg-amber-tint px-2.5 py-1 text-xs font-semibold text-amber-dim">
+                              無料
+                            </span>
+                          ) : !unlocked ? (
+                            <span className="absolute top-3 right-3 rounded-full bg-paper/90 px-2.5 py-1 text-xs font-medium text-ink-faint">
+                              ロック中
+                            </span>
+                          ) : null}
+                        </div>
+                        <div className="flex flex-1 flex-col justify-between p-5">
+                          <div>
+                            <p className="font-display font-semibold text-ink group-hover:text-signal">
+                              {material.title}
+                            </p>
+                            <p className="mt-1.5 text-sm leading-relaxed text-ink-soft">
+                              {material.description}
+                            </p>
                           </div>
-                          <p className="mt-4 font-display font-semibold text-ink group-hover:text-signal">
-                            {material.title}
-                          </p>
-                          <p className="mt-1.5 text-sm leading-relaxed text-ink-soft">
-                            {material.description}
+                          <p className="mt-4 text-sm font-medium text-signal">
+                            {unlocked ? "再生する →" : "詳細を見る →"}
                           </p>
                         </div>
-                        <p className="mt-4 text-sm font-medium text-signal">
-                          {unlocked ? "再生する →" : "詳細を見る →"}
-                        </p>
                       </Link>
                     </li>
                   );

@@ -86,42 +86,47 @@ export default async function ConversationPage() {
                     <li key={scenario.id}>
                       <Link
                         href={`/conversation/${scenario.slug}`}
-                        className="group flex h-full flex-col justify-between rounded-2xl border border-line bg-surface p-5 transition hover:border-ink-faint"
+                        className="group flex h-full flex-col overflow-hidden rounded-2xl border border-line bg-surface transition hover:border-ink-faint"
                       >
-                        <div>
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                              <SceneIllustration scene={scene} pixelSize={40} />
-                              <Avatar name={scenario.persona_name} size="sm" />
-                            </div>
-                            <div className="flex flex-col items-end gap-1">
-                              <span className="rounded-full bg-paper-dim px-2.5 py-1 text-[11px] font-medium text-ink-faint">
-                                {LEVEL_LABELS[(scenario.level as ScenarioLevel) ?? "beginner"]}
+                        <div className="relative h-32 w-full overflow-hidden">
+                          <SceneIllustration
+                            scene={scene}
+                            className="transition duration-300 group-hover:scale-105"
+                          />
+                          <div className="absolute top-3 right-3 flex flex-col items-end gap-1">
+                            <span className="rounded-full bg-paper/90 px-2.5 py-1 text-[11px] font-medium text-ink-faint">
+                              {LEVEL_LABELS[(scenario.level as ScenarioLevel) ?? "beginner"]}
+                            </span>
+                            {scenario.is_free ? (
+                              <span className="rounded-full bg-amber-tint px-2.5 py-1 text-xs font-semibold text-amber-dim">
+                                無料
                               </span>
-                              {scenario.is_free ? (
-                                <span className="rounded-full bg-amber-tint px-2.5 py-1 text-xs font-semibold text-amber-dim">
-                                  無料
-                                </span>
-                              ) : !unlocked ? (
-                                <span className="rounded-full bg-paper-dim px-2.5 py-1 text-xs font-medium text-ink-faint">
-                                  ロック中
-                                </span>
-                              ) : null}
-                            </div>
+                            ) : !unlocked ? (
+                              <span className="rounded-full bg-paper/90 px-2.5 py-1 text-xs font-medium text-ink-faint">
+                                ロック中
+                              </span>
+                            ) : null}
                           </div>
-                          <p className="mt-4 font-display font-semibold text-ink group-hover:text-signal">
-                            {scenario.title}
-                          </p>
-                          <p className="mt-1 text-xs font-medium text-signal">
-                            話し相手: {scenario.persona_name}（{scenario.persona_role}）
-                          </p>
-                          <p className="mt-2 text-sm leading-relaxed text-ink-soft">
-                            {scenario.description}
+                        </div>
+                        <div className="flex flex-1 flex-col justify-between p-5">
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <Avatar name={scenario.persona_name} size="sm" />
+                              <p className="font-display font-semibold text-ink group-hover:text-signal">
+                                {scenario.title}
+                              </p>
+                            </div>
+                            <p className="mt-2 text-xs font-medium text-signal">
+                              話し相手: {scenario.persona_name}（{scenario.persona_role}）
+                            </p>
+                            <p className="mt-2 text-sm leading-relaxed text-ink-soft">
+                              {scenario.description}
+                            </p>
+                          </div>
+                          <p className="mt-4 text-sm font-medium text-signal">
+                            {unlocked ? "話してみる →" : "詳細を見る →"}
                           </p>
                         </div>
-                        <p className="mt-4 text-sm font-medium text-signal">
-                          {unlocked ? "話してみる →" : "詳細を見る →"}
-                        </p>
                       </Link>
                     </li>
                   );
