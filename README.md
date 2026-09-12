@@ -70,7 +70,7 @@ npm run dev
 
 ### 初回セットアップ
 
-1. Supabaseプロジェクトを作成し、SQL Editorで `supabase/migrations/0001_init.sql` → `0002_vocab_decks.sql` → `0003_conversation_minutes.sql` → `0004_free_talk.sql` の順に実行
+1. Supabaseプロジェクトを作成し、SQL Editorで `supabase/migrations/0001_init.sql` → `0002_vocab_decks.sql` → `0003_conversation_minutes.sql` → `0004_free_talk.sql` → `0005_referrals.sql` の順に実行
 2. 以下のスクリプトを実行(`NEXT_PUBLIC_SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` を環境変数として読み込みます)
 
 ```bash
@@ -90,4 +90,11 @@ Vercelにこのリポジトリを接続し、`.env.example` に記載の環境�
 
 ## 紹介プログラムについて
 
-AI会話プランの購入時に紹介者へ¥1,000を支払う仕組みは、`src/lib/limits.ts` の各プランの回数上限を算出する際に「全購入が紹介経由」という最悪ケースとしてコストに織り込み済みです(ただし¥980のお試しプランは、¥1,000の紹介料がプラン価格そのものを上回ってしまうため、このプランについては紹介コストなしとして計算しています — お試しプランでも紹介プログラムを適用したい場合は、紹介料の見直しが必要です)。紹介コードの発行・追跡・支払いそのものの仕組みはまだ実装していません(スコープ外として保留中)。
+AI会話プランの購入時に紹介者へ¥1,000を支払う仕組みは、`src/lib/limits.ts` の各プランの上限(分)を算出する際に「全購入が紹介経由」という最悪ケースとしてコストに織り込み済みです(ただし¥980のお試しプランは、¥1,000の紹介料がプラン価格そのものを上回ってしまうため、このプランについては紹介コストなしとして計算しています — お試しプランでも紹介プログラムを適用したい場合は、紹介料の見直しが必要です)。
+
+紹介コードの**発行・入力・追跡**は実装済みです(`supabase/migrations/0005_referrals.sql`、`src/lib/referrals.ts`)。
+
+- 各ユーザーは `/dashboard` で自分専用の紹介コード(8桁の英数字、初回アクセス時に自動生成・`referral_codes` テーブルに保存)とシェア用リンク(`/pricing?ref=コード`)を確認できます。
+- 新規登録者は `/pricing` の紹介コード入力欄(`ReferralCodeField`)にコードを入力するか、シェア用リンク経由でアクセスすると自動入力されます(入力値は `localStorage` に保存され、決済ボタン押下時に `/api/checkout` へ送信)。
+- Stripeのサブスクリプションのmetadataに紹介者情報を載せ、Webhook(`customer.subscription.created` など)で該当ユーザーが実際に有料登録した時点で `referrals` テーブルに記録します(`status: "pending"` → 初回有効化で `"rewarded"`、以後は解約されても後退しません)。
+- **実際の¥1,000支払い(振込など)そのものはまだ自動化していません**。`referrals` テーブルの `status = 'rewarded'` な行を見て、運営側で手動送金する運用を想定しています。

@@ -3,6 +3,8 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/entitlements";
 import { Avatar } from "@/components/Avatar";
+import { ReferralCodeCard } from "@/components/ReferralCodeCard";
+import { getOrCreateReferralCode, getReferralStats } from "@/lib/referrals";
 import type { ConversationFeedback } from "@/lib/conversation";
 
 export const dynamic = "force-dynamic";
@@ -48,6 +50,18 @@ export default async function DashboardPage() {
         .select("slug, title, persona_name, persona_role, description, order_index")
         .order("order_index", { ascending: true }),
     ]);
+
+  // Best-effort: don't let a referral-tracking hiccup take down the whole
+  // dashboard for every user.
+  const referral = await Promise.all([
+    getOrCreateReferralCode(user.id),
+    getReferralStats(user.id),
+  ]).catch((err) => {
+    console.error("Failed to load referral info:", err instanceof Error ? err.message : err);
+    return null;
+  });
+  const referralCode = referral?.[0] ?? null;
+  const referralStats = referral?.[1] ?? null;
 
   const completed = (sessions ?? []).filter((s) => s.status === "completed");
 
@@ -239,6 +253,16 @@ export default async function DashboardPage() {
           )}
         </section>
       </div>
+
+      {referralCode && referralStats && (
+        <div className="mt-6">
+          <ReferralCodeCard
+            code={referralCode}
+            totalReferred={referralStats.totalReferred}
+            rewarded={referralStats.rewarded}
+          />
+        </div>
+      )}
     </main>
   );
 }

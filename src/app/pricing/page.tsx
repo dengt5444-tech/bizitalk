@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import {
   getConversationPlan,
   getCurrentUser,
@@ -5,6 +6,7 @@ import {
 } from "@/lib/entitlements";
 import { CheckoutButton } from "@/components/CheckoutButton";
 import { ManageSubscriptionButton } from "@/components/ManageSubscriptionButton";
+import { ReferralCodeField } from "@/components/ReferralCodeField";
 import { CONVERSATION_MINUTES_PER_MONTH } from "@/lib/limits";
 
 export const dynamic = "force-dynamic";
@@ -149,6 +151,12 @@ export default async function PricingPage() {
           話す練習(AI英会話)と聞く練習(リスニング)、それぞれのペースに合わせて選べる4つのプランをご用意しています。
         </p>
       </div>
+
+      {user && (
+        <Suspense fallback={null}>
+          <ReferralCodeField />
+        </Suspense>
+      )}
 
       <div className="mt-10 grid gap-6 sm:grid-cols-2">
         {plans.map((plan) => {
