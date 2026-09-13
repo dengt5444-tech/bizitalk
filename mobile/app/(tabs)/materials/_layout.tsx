@@ -15,6 +15,7 @@ export default function MaterialsLayout() {
       }}
     >
       <Stack.Screen name="index" options={{ title: "リスニング教材" }} />
+      <Stack.Screen name="[slug]" options={{ title: "" }} />
     </Stack>
   );
 }
