@@ -1,6 +1,9 @@
+import { STRIPE_PRICE_ID_STANDARD, STRIPE_PRICE_ID_TRIAL, STRIPE_PRICE_ID_UNLIMITED } from "./env";
 import { supabase } from "./supabase";
 
 const ACTIVE_STATUSES = new Set(["active", "trialing"]);
+
+export type ConversationPlan = "trial" | "standard" | "unlimited";
 
 // Mirrors ../src/lib/entitlements.ts, but queried directly against Supabase
 // (both tables are owner-SELECT-only under RLS, and the signed-in mobile
@@ -26,6 +29,23 @@ export async function hasActiveConversationSubscription(userId: string) {
     .eq("user_id", userId)
     .maybeSingle();
   return !!data && ACTIVE_STATUSES.has(data.status);
+}
+
+// UI-only tier lookup (see file header) — doesn't know about the
+// ADMIN_EMAILS allowlist, since that's a server-only env var.
+export async function getConversationPlan(userId: string | null | undefined): Promise<ConversationPlan | null> {
+  if (!userId) return null;
+  const { data } = await supabase
+    .from("subscriptions")
+    .select("status, price_id")
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (!data || !ACTIVE_STATUSES.has(data.status)) return null;
+  if (data.price_id === STRIPE_PRICE_ID_TRIAL) return "trial";
+  if (data.price_id === STRIPE_PRICE_ID_UNLIMITED) return "unlimited";
+  if (data.price_id === STRIPE_PRICE_ID_STANDARD) return "standard";
+  return null;
 }
 
 export async function isListeningEntitled(userId: string | null | undefined) {
