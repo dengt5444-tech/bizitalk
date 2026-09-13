@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
+import { planForAppleProductId } from "@/lib/apple/config";
 
 // Table-query functions below accept an optional already-resolved Supabase
 // client so callers that have one — API routes using getAuthedClient() for
@@ -45,22 +46,29 @@ function conversationPlanForPriceId(
   return null;
 }
 
-async function activeConversationPriceId(userId: string, supabase: SupabaseClient) {
+// A row can come from either payment provider — `source` says which one is
+// current, so only that provider's identifier column is trusted. (The
+// other column may hold a stale value from before a switch: e.g. a user
+// who bought via Stripe on the web, then later subscribed through the iOS
+// app, still has their old price_id sitting there untouched, since each
+// provider's webhook/sync path only overwrites its own columns.)
+async function activeConversationPlanRow(userId: string, supabase: SupabaseClient) {
   const { data } = await supabase
     .from("subscriptions")
-    .select("status, price_id")
+    .select("status, source, price_id, apple_product_id")
     .eq("user_id", userId)
     .maybeSingle();
 
   if (!data || !ACTIVE_STATUSES.has(data.status)) return null;
-  return data.price_id as string | null;
+  return data;
 }
 
 /**
  * Which AI conversation tier (if any) this user has an active
  * subscription to. Returns "admin" for the ADMIN_EMAILS allowlist (full
- * access, no Stripe subscription needed), a tier name for a real paying
- * subscriber, or null if they have none.
+ * access, no subscription needed), a tier name for a real paying
+ * subscriber (via Stripe or Apple in-app purchase), or null if they have
+ * none.
  */
 export async function getConversationPlan(
   user: { id: string; email?: string | null } | null | undefined,
@@ -68,8 +76,14 @@ export async function getConversationPlan(
 ): Promise<ConversationPlan | "admin" | null> {
   if (!user) return null;
   if (isAdminEmail(user.email)) return "admin";
-  const priceId = await activeConversationPriceId(user.id, supabase ?? (await createClient()));
-  return conversationPlanForPriceId(priceId);
+  const row = await activeConversationPlanRow(user.id, supabase ?? (await createClient()));
+  if (!row) return null;
+  if (row.source === "apple_iap") {
+    // Never "listening" here — Apple purchases for that plan are routed to
+    // gakuto_subscriptions instead, same as Stripe's.
+    return planForAppleProductId(row.apple_product_id) as ConversationPlan | null;
+  }
+  return conversationPlanForPriceId(row.price_id);
 }
 
 /**

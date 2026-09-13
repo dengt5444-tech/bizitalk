@@ -1,4 +1,5 @@
 import { STRIPE_PRICE_ID_STANDARD, STRIPE_PRICE_ID_TRIAL, STRIPE_PRICE_ID_UNLIMITED } from "./env";
+import { IAP_PLAN_FOR_PRODUCT_ID } from "./iap";
 import { supabase } from "./supabase";
 
 const ACTIVE_STATUSES = new Set(["active", "trialing"]);
@@ -37,11 +38,17 @@ export async function getConversationPlan(userId: string | null | undefined): Pr
   if (!userId) return null;
   const { data } = await supabase
     .from("subscriptions")
-    .select("status, price_id")
+    .select("status, price_id, source, apple_product_id")
     .eq("user_id", userId)
     .maybeSingle();
 
   if (!data || !ACTIVE_STATUSES.has(data.status)) return null;
+
+  if (data.source === "apple_iap") {
+    const plan = IAP_PLAN_FOR_PRODUCT_ID[data.apple_product_id ?? ""];
+    return plan === "trial" || plan === "standard" || plan === "unlimited" ? plan : null;
+  }
+
   if (data.price_id === STRIPE_PRICE_ID_TRIAL) return "trial";
   if (data.price_id === STRIPE_PRICE_ID_UNLIMITED) return "unlimited";
   if (data.price_id === STRIPE_PRICE_ID_STANDARD) return "standard";

@@ -112,5 +112,9 @@ mobile/
 - マジックリンクによるログイン(アプリ内ディープリンク)は未対応です。6桁コードでのログインのみ実装しています。
 - テキストモードでの音声入力(Web版のWeb Speech APIによるディクテーション)は未実装です。
 - 紹介プログラムのURL経由(`?ref=`)でのコード自動入力は未対応です(手入力のみ)。
-- **iOSでの課金**: AppleはApp内で消費するデジタルサブスクリプションにStoreKit(App内課金)の使用を原則義務付けており、このAI会話サービスは外部決済を許可される「リーダーアプリ」の例外に該当しません。StoreKit対応(別途 App Store Connect でのプロダクト設定が必要)が完了するまでの暫定対応として、iOS版では新規プランへの決済ボタン・外部決済へのリンクを一切表示していません(`components/pricing/PricingPlans.tsx`)。**ストア審査に出す前に、この対応方針(StoreKit実装 or 現状維持)を確認してください** — 詳細は下記の「リリースに向けてユーザー側で必要な作業」を参照。
+- **iOSでの課金(StoreKit実装済み)**: AppleはApp内で消費するデジタルサブスクリプションにStoreKit(App内課金)の使用を原則義務付けており、このAI会話サービスは外部決済を許可される「リーダーアプリ」の例外に該当しません。iOS版は `expo-iap` を使ったStoreKit購入フローを実装済みです(`components/pricing/PricingPlans.tsx` / `lib/iap.ts`)。Android版は引き続きStripe Checkoutを使用します(ストアはWeb決済を許可)。
+  - 購入完了後、StoreKitが返すJWS署名付きトランザクションをバックエンド(`../src/app/api/iap/apple/verify/route.ts`)に送り、Appleの署名を`@apple/app-store-server-library`(Apple公式ライブラリ)で検証してから `subscriptions`/`gakuto_subscriptions` テーブルへ反映します。クライアントの自己申告を信用しない設計です。
+  - 更新・解約・返金などの非同期イベントは App Store Server Notifications V2 (`../src/app/api/webhooks/apple/route.ts`) で受け取ります。**App Store Connect側でこのURLを通知先として設定する必要があります**(下記チェックリスト参照)。
+  - 「購入を復元」ボタンも実装済みです(端末変更・再インストール後の再同期用)。
+  - **ストア審査に出す前に、App Store Connectで4つのサブスクリプション商品(プロダクトID)を作成し、`.env` の `APPLE_PRODUCT_ID_*` と `EXPO_PUBLIC_APPLE_PRODUCT_ID_*` に設定してください** — 詳細は下記の「リリースに向けてユーザー側で必要な作業」を参照。
 - アカウント削除は実装済みです(マイページの「アカウントを削除」)。Apple審査ガイドライン5.1.1(v)の要件を満たします。

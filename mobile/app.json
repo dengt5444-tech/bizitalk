@@ -52,7 +52,8 @@
           "microphonePermission": "AI会話練習で音声を録音するためにマイクを使用します。",
           "cameraPermission": "このアプリは音声のみで通信し、カメラは使用しません。"
         }
-      ]
+      ],
+      "expo-iap"
     ],
     "extra": {
       "router": {}

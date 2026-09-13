@@ -29,3 +29,13 @@ export const API_BASE_URL = required(
 export const STRIPE_PRICE_ID_TRIAL = process.env.EXPO_PUBLIC_STRIPE_PRICE_ID_TRIAL;
 export const STRIPE_PRICE_ID_STANDARD = process.env.EXPO_PUBLIC_STRIPE_PRICE_ID;
 export const STRIPE_PRICE_ID_UNLIMITED = process.env.EXPO_PUBLIC_STRIPE_PRICE_ID_UNLIMITED;
+
+// App Store Connect product identifiers (not secret — these are the exact
+// strings shown to App Store users in the system purchase sheet). One per
+// plan, same four plans as the Stripe prices above. Required for the iOS
+// purchase flow (components/pricing/PricingPlans.tsx); harmless to leave
+// unset on Android, which still uses Stripe checkout.
+export const APPLE_PRODUCT_ID_LISTENING = process.env.EXPO_PUBLIC_APPLE_PRODUCT_ID_LISTENING;
+export const APPLE_PRODUCT_ID_TRIAL = process.env.EXPO_PUBLIC_APPLE_PRODUCT_ID_TRIAL;
+export const APPLE_PRODUCT_ID_STANDARD = process.env.EXPO_PUBLIC_APPLE_PRODUCT_ID;
+export const APPLE_PRODUCT_ID_UNLIMITED = process.env.EXPO_PUBLIC_APPLE_PRODUCT_ID_UNLIMITED;

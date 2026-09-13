@@ -77,6 +77,13 @@ async function upsertFromSubscription(
   await admin.from(tableForPlan(subscription.metadata?.plan)).upsert(
     {
       user_id: userId,
+      // Explicit even though it's also the column default: a user could
+      // have an existing apple_iap-sourced row (e.g. they bought through
+      // the iOS app first, then subscribe again via Stripe on the web) —
+      // upsert() only overwrites the columns listed here, so leaving this
+      // out would let a stale "apple_iap" source survive under a Stripe
+      // subscription.
+      source: "stripe",
       stripe_customer_id:
         typeof subscription.customer === "string"
           ? subscription.customer
