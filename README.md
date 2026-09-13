@@ -19,7 +19,7 @@ CEO、海外の同僚、取引先——相手役・シチュエーション別�
 
 ## 構成
 
-- **認証**: Supabase Auth(マジックリンク + 6桁コードのフォールバック)
+- **認証**: Supabase Auth(マジックリンク + コード入力のフォールバック)。メール送信はResendのカスタムSMTP経由(独自ドメイン `bizitalkapp.com` を使用)
 - **AI会話練習**: 4カテゴリー・全26シーン + フリートークモード(`conversation_scenarios`)
   - 同僚・日常 / 海外の同僚(インド・シンガポール・イギリス・オーストラリア・ドイツ) / 顧客・取引先 / 経営陣・上司(CEO・CFO)
   - **フリートーク**: 固定のシーン・相手役ではなく、話したいテーマを自分で指定して(空欄でもOK)AIと自由形式の会話を練習できるモード。指定したテーマは `conversation_sessions.custom_topic` に保存し、テキストモードの返信生成・リアルタイム音声の指示・冒頭の挨拶いずれにも反映(`src/lib/conversation.ts` の `withCustomTopic` / `freeTalkOpeningLine`)。テーマ未指定の場合はAIが幅広いビジネス系の話題を提案します。
