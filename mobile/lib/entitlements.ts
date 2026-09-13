@@ -53,3 +53,10 @@ export async function isListeningEntitled(userId: string | null | undefined) {
   if (await hasActiveListeningSubscription(userId)) return true;
   return hasActiveConversationSubscription(userId);
 }
+
+// Whether this user can access paid AI conversation scenarios: any active
+// subscription tier. (UI-only — see file header.)
+export async function isEntitled(userId: string | null | undefined) {
+  if (!userId) return false;
+  return hasActiveConversationSubscription(userId);
+}

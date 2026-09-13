@@ -15,6 +15,9 @@ export default function ConversationLayout() {
       }}
     >
       <Stack.Screen name="index" options={{ title: "AI会話" }} />
+      <Stack.Screen name="[slug]" options={{ title: "" }} />
+      <Stack.Screen name="history/index" options={{ title: "会話の記録" }} />
+      <Stack.Screen name="history/[id]" options={{ title: "" }} />
     </Stack>
   );
 }
