@@ -4,6 +4,8 @@ import { ActivityIndicator, View } from "react-native";
 import { Avatar } from "@/components/Avatar";
 import { StatTile } from "@/components/dashboard/StatTile";
 import { PricingPlans } from "@/components/pricing/PricingPlans";
+import { DangerZone } from "@/components/settings/DangerZone";
+import { SettingsLinks } from "@/components/settings/SettingsLinks";
 import { Button } from "@/components/ui/Button";
 import { Card, PressableCard } from "@/components/ui/Card";
 import { ScreenScroll } from "@/components/ui/ScreenContainer";
@@ -208,8 +210,18 @@ export default function MyPageScreen() {
         />
       </View>
 
+      <View style={{ gap: 12 }}>
+        <Text eyebrow color="signal" weight="medium">
+          Settings
+        </Text>
+        <SettingsLinks />
+      </View>
+
       {user && (
-        <Button label="ログアウト" variant="ghost" onPress={signOut} />
+        <>
+          <Button label="ログアウト" variant="ghost" onPress={signOut} />
+          <DangerZone />
+        </>
       )}
     </ScreenScroll>
   );

@@ -158,6 +158,18 @@ export default function LoginScreen() {
             </View>
           )}
         </Card>
+
+        <View style={{ flexDirection: "row", justifyContent: "center", gap: 6, marginTop: 16 }}>
+          <Text size={12} color="inkFaint" onPress={() => router.push("/terms")}>
+            利用規約
+          </Text>
+          <Text size={12} color="inkFaint">
+            ・
+          </Text>
+          <Text size={12} color="inkFaint" onPress={() => router.push("/privacy")}>
+            プライバシーポリシー
+          </Text>
+        </View>
       </ScreenScroll>
     </KeyboardAvoidingView>
   );

@@ -1,6 +1,6 @@
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
-import { View } from "react-native";
+import { Platform, View } from "react-native";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -195,6 +195,29 @@ export function PricingPlans({
                     loading={isLoading}
                     onPress={() => handleManage(plan.key === "listening" ? "listening" : "conversation")}
                   />
+                </View>
+              ) : Platform.OS === "ios" ? (
+                // Apple's App Store guideline 3.1.1 requires In-App Purchase
+                // for digital subscriptions consumed in the app — this AI
+                // conversation service doesn't qualify for the "reader app"
+                // exception that lets some apps sell externally. Until
+                // StoreKit IAP is wired up, the safest posture is no
+                // purchase button and no tappable link to the web checkout
+                // here at all (see mobile/README.md). Managing/cancelling
+                // an *existing* subscription above is a different, allowed
+                // case, so that button stays on every platform.
+                <View
+                  style={{
+                    alignSelf: "stretch",
+                    borderRadius: 999,
+                    paddingVertical: 13,
+                    paddingHorizontal: 16,
+                    backgroundColor: theme.colors.paperDim,
+                  }}
+                >
+                  <Text size={13} color="inkFaint" style={{ textAlign: "center" }}>
+                    このプランはWeb版でご登録いただけます
+                  </Text>
                 </View>
               ) : (
                 <Button
