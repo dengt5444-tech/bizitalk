@@ -1,28 +1,40 @@
 import { useRouter } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
-import { ActivityIndicator, View } from "react-native";
+import { RefreshControl, View } from "react-native";
 import { Badge } from "@/components/ui/Badge";
 import { PressableCard } from "@/components/ui/Card";
 import { ScreenScroll } from "@/components/ui/ScreenContainer";
+import { SkeletonList } from "@/components/ui/Skeleton";
 import { Heading, Text } from "@/components/ui/Text";
 import { useAuth } from "@/context/AuthProvider";
+import { useTheme } from "@/theme/ThemeProvider";
 import { isListeningEntitled } from "@/lib/entitlements";
 import { LEVEL_LABELS, LEVEL_ORDER, type MaterialLevel, type MaterialSummary } from "@/lib/materials";
 import { listMaterials } from "@/lib/queries/materials";
 
 export default function MaterialsScreen() {
+  const theme = useTheme();
   const router = useRouter();
   const { user } = useAuth();
   const [materials, setMaterials] = useState<MaterialSummary[] | null>(null);
   const [subscribed, setSubscribed] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const reload = useCallback(() => listMaterials().then(setMaterials), []);
 
   useEffect(() => {
-    listMaterials().then(setMaterials);
-  }, []);
+    reload();
+  }, [reload]);
 
   useEffect(() => {
     isListeningEntitled(user?.id).then(setSubscribed);
   }, [user]);
+
+  async function handleRefresh() {
+    setRefreshing(true);
+    await reload();
+    setRefreshing(false);
+  }
 
   const grouped = useCallback(() => {
     const groups = new Map<MaterialLevel, MaterialSummary[]>();
@@ -36,8 +48,8 @@ export default function MaterialsScreen() {
 
   if (!materials) {
     return (
-      <ScreenScroll contentContainerStyle={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-        <ActivityIndicator />
+      <ScreenScroll contentContainerStyle={{ gap: 28 }}>
+        <SkeletonList count={4} />
       </ScreenScroll>
     );
   }
@@ -45,7 +57,12 @@ export default function MaterialsScreen() {
   const groups = grouped();
 
   return (
-    <ScreenScroll contentContainerStyle={{ gap: 28 }}>
+    <ScreenScroll
+      contentContainerStyle={{ gap: 28 }}
+      refreshControl={
+        <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={theme.colors.signal} />
+      }
+    >
       <View>
         <Text eyebrow color="signal" weight="medium">
           Listening

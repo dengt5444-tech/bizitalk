@@ -1,26 +1,37 @@
 import { useRouter } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
-import { ActivityIndicator, View } from "react-native";
+import { ActivityIndicator, RefreshControl, View } from "react-native";
 import { ReviewWordsView } from "@/components/review/ReviewWordsView";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { ScreenScroll } from "@/components/ui/ScreenContainer";
+import { SkeletonList } from "@/components/ui/Skeleton";
 import { Heading, Text } from "@/components/ui/Text";
 import { useAuth } from "@/context/AuthProvider";
+import { useTheme } from "@/theme/ThemeProvider";
 import { listReviewWords, type ReviewWord } from "@/lib/queries/review";
 
 export default function ReviewScreen() {
+  const theme = useTheme();
   const router = useRouter();
   const { user, initializing } = useAuth();
   const [words, setWords] = useState<ReviewWord[] | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
   const reload = useCallback(() => {
-    if (user) listReviewWords().then(setWords);
+    if (user) return listReviewWords().then(setWords);
+    return Promise.resolve();
   }, [user]);
 
   useEffect(() => {
     reload();
   }, [reload]);
+
+  async function handleRefresh() {
+    setRefreshing(true);
+    await reload();
+    setRefreshing(false);
+  }
 
   const header = (
     <View style={{ gap: 6 }}>
@@ -56,14 +67,20 @@ export default function ReviewScreen() {
 
   if (!words) {
     return (
-      <ScreenScroll contentContainerStyle={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-        <ActivityIndicator />
+      <ScreenScroll contentContainerStyle={{ gap: 20 }}>
+        {header}
+        <SkeletonList count={3} />
       </ScreenScroll>
     );
   }
 
   return (
-    <ScreenScroll contentContainerStyle={{ gap: 20 }}>
+    <ScreenScroll
+      contentContainerStyle={{ gap: 20 }}
+      refreshControl={
+        <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={theme.colors.signal} />
+      }
+    >
       {header}
 
       {words.length === 0 ? (

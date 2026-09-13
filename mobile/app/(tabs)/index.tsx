@@ -1,12 +1,14 @@
-import { useRouter } from "expo-router";
-import React from "react";
+import { Redirect, useRouter } from "expo-router";
+import React, { useEffect, useState } from "react";
 import { View } from "react-native";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { GradientHero } from "@/components/ui/GradientHero";
 import { ScreenScroll } from "@/components/ui/ScreenContainer";
 import { Heading, Text } from "@/components/ui/Text";
 import { useAuth } from "@/context/AuthProvider";
+import { hasSeenOnboarding } from "@/lib/onboarding";
 import { useTheme } from "@/theme/ThemeProvider";
 
 const FEATURES = [
@@ -32,17 +34,21 @@ export default function HomeScreen() {
   const theme = useTheme();
   const router = useRouter();
   const { user } = useAuth();
+  const [shouldOnboard, setShouldOnboard] = useState(false);
+
+  useEffect(() => {
+    hasSeenOnboarding().then((seen) => {
+      if (!seen) setShouldOnboard(true);
+    });
+  }, []);
+
+  if (shouldOnboard) {
+    return <Redirect href="/onboarding" />;
+  }
 
   return (
     <ScreenScroll contentContainerStyle={{ gap: 28, paddingBottom: 48 }}>
-      <View
-        style={{
-          borderRadius: theme.radius.lg,
-          backgroundColor: theme.colors.ink,
-          padding: 28,
-          gap: 16,
-        }}
-      >
+      <GradientHero>
         <Badge label="1シーンは無料でお試しいただけます" accent="signal" />
         <Heading level={1} style={{ color: theme.colors.paper }}>
           話す。伝わる。{"\n"}使えるビジネス英語へ。
@@ -60,7 +66,7 @@ export default function HomeScreen() {
             style={{ borderColor: theme.colors.inkFaint }}
           />
         </View>
-      </View>
+      </GradientHero>
 
       {!user && (
         <Card style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 }}>

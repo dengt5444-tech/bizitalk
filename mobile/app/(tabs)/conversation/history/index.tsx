@@ -1,27 +1,50 @@
 import { useRouter } from "expo-router";
-import React, { useEffect, useState } from "react";
-import { ActivityIndicator, View } from "react-native";
+import React, { useCallback, useEffect, useState } from "react";
+import { ActivityIndicator, RefreshControl, View } from "react-native";
 import { Avatar } from "@/components/Avatar";
 import { Button } from "@/components/ui/Button";
 import { Card, PressableCard } from "@/components/ui/Card";
 import { ScreenScroll } from "@/components/ui/ScreenContainer";
+import { SkeletonList } from "@/components/ui/Skeleton";
 import { Heading, Text } from "@/components/ui/Text";
 import { useAuth } from "@/context/AuthProvider";
+import { useTheme } from "@/theme/ThemeProvider";
 import { listCompletedSessions, type HistorySession } from "@/lib/queries/conversationHistory";
 
 export default function ConversationHistoryScreen() {
+  const theme = useTheme();
   const router = useRouter();
   const { user, initializing } = useAuth();
   const [sessions, setSessions] = useState<HistorySession[] | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
-  useEffect(() => {
-    if (user) listCompletedSessions().then(setSessions);
+  const reload = useCallback(() => {
+    if (user) return listCompletedSessions().then(setSessions);
+    return Promise.resolve();
   }, [user]);
 
-  if (initializing || (user && !sessions)) {
+  useEffect(() => {
+    reload();
+  }, [reload]);
+
+  async function handleRefresh() {
+    setRefreshing(true);
+    await reload();
+    setRefreshing(false);
+  }
+
+  if (initializing) {
     return (
       <ScreenScroll contentContainerStyle={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
         <ActivityIndicator />
+      </ScreenScroll>
+    );
+  }
+
+  if (user && !sessions) {
+    return (
+      <ScreenScroll contentContainerStyle={{ gap: 20 }}>
+        <SkeletonList count={4} />
       </ScreenScroll>
     );
   }
@@ -36,7 +59,12 @@ export default function ConversationHistoryScreen() {
   }
 
   return (
-    <ScreenScroll contentContainerStyle={{ gap: 20 }}>
+    <ScreenScroll
+      contentContainerStyle={{ gap: 20 }}
+      refreshControl={
+        <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={theme.colors.signal} />
+      }
+    >
       <View>
         <Text eyebrow color="signal" weight="medium">
           History

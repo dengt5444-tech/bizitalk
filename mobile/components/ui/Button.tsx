@@ -1,5 +1,6 @@
 import React from "react";
-import { ActivityIndicator, Pressable, type PressableProps, StyleSheet } from "react-native";
+import { ActivityIndicator, Pressable, type GestureResponderEvent, type PressableProps, StyleSheet } from "react-native";
+import { haptics } from "@/lib/haptics";
 import { useTheme } from "@/theme/ThemeProvider";
 import { Text } from "./Text";
 
@@ -19,6 +20,7 @@ export function Button({
   fullWidth = false,
   disabled,
   style,
+  onPress,
   ...rest
 }: ButtonProps) {
   const theme = useTheme();
@@ -29,15 +31,22 @@ export function Button({
   const borderColor = variant === "ghost" ? "transparent" : theme.colors.line;
   const textColor = variant === "primary" ? theme.colors.paper : theme.colors.ink;
 
+  function handlePress(event: GestureResponderEvent) {
+    haptics.tap();
+    onPress?.(event);
+  }
+
   return (
     <Pressable
       disabled={isDisabled}
+      onPress={handlePress}
       style={(state) => [
         styles.base,
         {
           backgroundColor,
           borderColor: variant === "primary" ? backgroundColor : borderColor,
           opacity: isDisabled ? 0.5 : state.pressed ? 0.85 : 1,
+          transform: [{ scale: state.pressed && !isDisabled ? 0.97 : 1 }],
           alignSelf: fullWidth ? "stretch" : "flex-start",
         },
         typeof style === "function" ? style(state) : style,

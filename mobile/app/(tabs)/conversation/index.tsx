@@ -1,35 +1,47 @@
 import { useRouter } from "expo-router";
-import React, { useEffect, useState } from "react";
-import { ActivityIndicator, View } from "react-native";
+import React, { useCallback, useEffect, useState } from "react";
+import { RefreshControl, View } from "react-native";
 import { Avatar } from "@/components/Avatar";
 import { Badge } from "@/components/ui/Badge";
 import { PressableCard } from "@/components/ui/Card";
 import { ScreenScroll } from "@/components/ui/ScreenContainer";
+import { SkeletonList } from "@/components/ui/Skeleton";
 import { Heading, Text } from "@/components/ui/Text";
 import { useAuth } from "@/context/AuthProvider";
+import { useTheme } from "@/theme/ThemeProvider";
 import { isEntitled } from "@/lib/entitlements";
 import { FREE_TALK_SLUG } from "@/lib/conversation";
 import { CATEGORY_DESCRIPTIONS, CATEGORY_LABELS, CATEGORY_ORDER, LEVEL_LABELS, type ScenarioCategory, type ScenarioLevel } from "@/lib/scenarios";
 import { listScenarios, type ScenarioSummary } from "@/lib/queries/scenarios";
 
 export default function ConversationScreen() {
+  const theme = useTheme();
   const router = useRouter();
   const { user } = useAuth();
   const [scenarios, setScenarios] = useState<ScenarioSummary[] | null>(null);
   const [subscribed, setSubscribed] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const reload = useCallback(() => listScenarios().then(setScenarios), []);
 
   useEffect(() => {
-    listScenarios().then(setScenarios);
-  }, []);
+    reload();
+  }, [reload]);
 
   useEffect(() => {
     isEntitled(user?.id).then(setSubscribed);
   }, [user]);
 
+  async function handleRefresh() {
+    setRefreshing(true);
+    await reload();
+    setRefreshing(false);
+  }
+
   if (!scenarios) {
     return (
-      <ScreenScroll contentContainerStyle={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-        <ActivityIndicator />
+      <ScreenScroll contentContainerStyle={{ gap: 28 }}>
+        <SkeletonList count={4} />
       </ScreenScroll>
     );
   }
@@ -45,7 +57,12 @@ export default function ConversationScreen() {
   }
 
   return (
-    <ScreenScroll contentContainerStyle={{ gap: 28 }}>
+    <ScreenScroll
+      contentContainerStyle={{ gap: 28 }}
+      refreshControl={
+        <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={theme.colors.signal} />
+      }
+    >
       <View>
         <Text eyebrow color="signal" weight="medium">
           Conversation

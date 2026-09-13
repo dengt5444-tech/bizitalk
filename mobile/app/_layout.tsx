@@ -22,6 +22,7 @@ function RootStack() {
       }}
     >
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+      <Stack.Screen name="onboarding" options={{ headerShown: false }} />
       <Stack.Screen name="login" options={{ title: "ログイン" }} />
       <Stack.Screen name="terms" options={{ title: "利用規約" }} />
       <Stack.Screen name="privacy" options={{ title: "プライバシーポリシー" }} />

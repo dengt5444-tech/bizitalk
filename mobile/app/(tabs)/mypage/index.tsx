@@ -1,6 +1,6 @@
 import { useRouter } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
-import { ActivityIndicator, View } from "react-native";
+import { ActivityIndicator, RefreshControl, View } from "react-native";
 import { Avatar } from "@/components/Avatar";
 import { StatTile } from "@/components/dashboard/StatTile";
 import { PricingPlans } from "@/components/pricing/PricingPlans";
@@ -8,7 +8,9 @@ import { DangerZone } from "@/components/settings/DangerZone";
 import { SettingsLinks } from "@/components/settings/SettingsLinks";
 import { Button } from "@/components/ui/Button";
 import { Card, PressableCard } from "@/components/ui/Card";
+import { GradientHero } from "@/components/ui/GradientHero";
 import { ScreenScroll } from "@/components/ui/ScreenContainer";
+import { SkeletonList } from "@/components/ui/Skeleton";
 import { Heading, Text } from "@/components/ui/Text";
 import { useAuth } from "@/context/AuthProvider";
 import { getConversationPlan, isListeningEntitled } from "@/lib/entitlements";
@@ -23,10 +25,16 @@ export default function MyPageScreen() {
   const [dashboard, setDashboard] = useState<DashboardData | null>(null);
   const [conversationPlan, setConversationPlan] = useState<Awaited<ReturnType<typeof getConversationPlan>>>(null);
   const [listeningSubscribed, setListeningSubscribed] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   const reloadEntitlements = useCallback(() => {
     getConversationPlan(user?.id).then(setConversationPlan);
     isListeningEntitled(user?.id).then(setListeningSubscribed);
+  }, [user]);
+
+  const reloadDashboard = useCallback(() => {
+    if (user) return loadDashboard().then(setDashboard);
+    return Promise.resolve();
   }, [user]);
 
   useEffect(() => {
@@ -34,8 +42,14 @@ export default function MyPageScreen() {
   }, [reloadEntitlements]);
 
   useEffect(() => {
-    if (user) loadDashboard().then(setDashboard);
-  }, [user]);
+    reloadDashboard();
+  }, [reloadDashboard]);
+
+  async function handleRefresh() {
+    setRefreshing(true);
+    await Promise.all([reloadEntitlements(), reloadDashboard()]);
+    setRefreshing(false);
+  }
 
   if (initializing) {
     return (
@@ -46,7 +60,12 @@ export default function MyPageScreen() {
   }
 
   return (
-    <ScreenScroll contentContainerStyle={{ gap: 28 }}>
+    <ScreenScroll
+      contentContainerStyle={{ gap: 28 }}
+      refreshControl={
+        <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={theme.colors.signal} />
+      }
+    >
       <View>
         <Text eyebrow color="signal" weight="medium">
           My Page
@@ -67,6 +86,8 @@ export default function MyPageScreen() {
           <Button label="ログイン" onPress={() => router.push("/login")} />
         </Card>
       )}
+
+      {user && !dashboard && <SkeletonList count={3} />}
 
       {user && dashboard && (
         <>
@@ -118,7 +139,7 @@ export default function MyPageScreen() {
           )}
 
           {dashboard.recommended && (
-            <View style={{ borderRadius: theme.radius.md, backgroundColor: theme.colors.ink, padding: 20, gap: 12 }}>
+            <GradientHero style={{ borderRadius: theme.radius.md }}>
               <Text size={11} color="inkFaint" eyebrow>
                 次におすすめ
               </Text>
@@ -140,7 +161,7 @@ export default function MyPageScreen() {
                 label="このシーンを話す →"
                 onPress={() => router.push(`/(tabs)/conversation/${dashboard.recommended!.slug}`)}
               />
-            </View>
+            </GradientHero>
           )}
 
           <Card style={{ gap: 10 }}>

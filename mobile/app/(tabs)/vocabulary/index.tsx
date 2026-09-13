@@ -1,38 +1,55 @@
 import { useRouter } from "expo-router";
-import React, { useEffect, useState } from "react";
-import { ActivityIndicator, View } from "react-native";
+import React, { useCallback, useEffect, useState } from "react";
+import { RefreshControl, View } from "react-native";
 import { Badge } from "@/components/ui/Badge";
 import { PressableCard } from "@/components/ui/Card";
 import { ScreenScroll } from "@/components/ui/ScreenContainer";
+import { SkeletonList } from "@/components/ui/Skeleton";
 import { Heading, Text } from "@/components/ui/Text";
 import { useAuth } from "@/context/AuthProvider";
+import { useTheme } from "@/theme/ThemeProvider";
 import { isListeningEntitled } from "@/lib/entitlements";
 import { listVocabDecks, type VocabDeckSummary } from "@/lib/queries/vocab";
 
 export default function VocabularyScreen() {
+  const theme = useTheme();
   const router = useRouter();
   const { user } = useAuth();
   const [decks, setDecks] = useState<VocabDeckSummary[] | null>(null);
   const [subscribed, setSubscribed] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const reload = useCallback(() => listVocabDecks().then(setDecks), []);
 
   useEffect(() => {
-    listVocabDecks().then(setDecks);
-  }, []);
+    reload();
+  }, [reload]);
 
   useEffect(() => {
     isListeningEntitled(user?.id).then(setSubscribed);
   }, [user]);
 
+  async function handleRefresh() {
+    setRefreshing(true);
+    await reload();
+    setRefreshing(false);
+  }
+
   if (!decks) {
     return (
-      <ScreenScroll contentContainerStyle={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-        <ActivityIndicator />
+      <ScreenScroll contentContainerStyle={{ gap: 20 }}>
+        <SkeletonList count={4} />
       </ScreenScroll>
     );
   }
 
   return (
-    <ScreenScroll contentContainerStyle={{ gap: 20 }}>
+    <ScreenScroll
+      contentContainerStyle={{ gap: 20 }}
+      refreshControl={
+        <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={theme.colors.signal} />
+      }
+    >
       <View>
         <Text eyebrow color="signal" weight="medium">
           Vocabulary
