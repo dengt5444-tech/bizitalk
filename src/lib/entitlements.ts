@@ -1,5 +1,13 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 
+// Table-query functions below accept an optional already-resolved Supabase
+// client so callers that have one — API routes using getAuthedClient() for
+// a mobile bearer-token request, mainly — can pass it through instead of
+// this module creating its own cookie-based client, which would carry no
+// session on a bearer-token request and get blocked by RLS. Server
+// Components never had a client to pass, so they keep omitting it and get
+// the same cookie-based lookup as before.
 const ACTIVE_STATUSES = new Set(["active", "trialing"]);
 
 const ADMIN_EMAILS = new Set(
@@ -37,8 +45,7 @@ function conversationPlanForPriceId(
   return null;
 }
 
-async function activeConversationPriceId(userId: string) {
-  const supabase = await createClient();
+async function activeConversationPriceId(userId: string, supabase: SupabaseClient) {
   const { data } = await supabase
     .from("subscriptions")
     .select("status, price_id")
@@ -57,10 +64,11 @@ async function activeConversationPriceId(userId: string) {
  */
 export async function getConversationPlan(
   user: { id: string; email?: string | null } | null | undefined,
+  supabase?: SupabaseClient,
 ): Promise<ConversationPlan | "admin" | null> {
   if (!user) return null;
   if (isAdminEmail(user.email)) return "admin";
-  const priceId = await activeConversationPriceId(user.id);
+  const priceId = await activeConversationPriceId(user.id, supabase ?? (await createClient()));
   return conversationPlanForPriceId(priceId);
 }
 
@@ -71,8 +79,9 @@ export async function getConversationPlan(
  */
 export async function isEntitled(
   user: { id: string; email?: string | null } | null | undefined,
+  supabase?: SupabaseClient,
 ) {
-  return (await getConversationPlan(user)) !== null;
+  return (await getConversationPlan(user, supabase)) !== null;
 }
 
 // The listening (business-listening materials) plan is tracked in the
@@ -80,8 +89,7 @@ export async function isEntitled(
 // Bijirisu uses) when bought standalone, but it's also bundled into every
 // AI conversation tier (trial/standard/unlimited) — only the pure listening
 // plan is a genuinely separate purchase.
-export async function hasActiveListeningSubscription(userId: string) {
-  const supabase = await createClient();
+export async function hasActiveListeningSubscription(userId: string, supabase: SupabaseClient) {
   const { data } = await supabase
     .from("gakuto_subscriptions")
     .select("status")
@@ -93,9 +101,11 @@ export async function hasActiveListeningSubscription(userId: string) {
 
 export async function isListeningEntitled(
   user: { id: string; email?: string | null } | null | undefined,
+  supabase?: SupabaseClient,
 ) {
   if (!user) return false;
   if (isAdminEmail(user.email)) return true;
-  if (await hasActiveListeningSubscription(user.id)) return true;
-  return (await getConversationPlan(user)) !== null;
+  const client = supabase ?? (await createClient());
+  if (await hasActiveListeningSubscription(user.id, client)) return true;
+  return (await getConversationPlan(user, client)) !== null;
 }

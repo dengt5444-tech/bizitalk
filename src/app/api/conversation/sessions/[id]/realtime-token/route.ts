@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { getAuthedClient } from "@/lib/supabase/api";
 import { REALTIME_MODEL } from "@/lib/openai";
 import { freeTalkOpeningLine, withCustomTopic } from "@/lib/conversation";
 
@@ -17,10 +17,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { supabase, user } = await getAuthedClient();
 
   if (!user) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });

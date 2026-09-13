@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { getAuthedClient } from "@/lib/supabase/api";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createOpenAIClient, TTS_MODEL } from "@/lib/openai";
 import { isListeningEntitled } from "@/lib/entitlements";
@@ -35,7 +35,7 @@ export async function GET(
 ) {
   const { id } = await params;
 
-  const supabase = await createClient();
+  const { supabase, user } = await getAuthedClient();
   const { data: material } = await supabase
     .from("gakuto_materials")
     .select("id, script, voice, is_free, dialogue")
@@ -47,15 +47,11 @@ export async function GET(
   }
 
   if (!material.is_free) {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
     if (!user) {
       return NextResponse.json({ error: "unauthorized" }, { status: 401 });
     }
 
-    if (!(await isListeningEntitled(user))) {
+    if (!(await isListeningEntitled(user, supabase))) {
       return NextResponse.json({ error: "payment_required" }, { status: 403 });
     }
   }

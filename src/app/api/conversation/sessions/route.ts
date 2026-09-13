@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { getAuthedClient } from "@/lib/supabase/api";
 import { getConversationPlan } from "@/lib/entitlements";
 import { minutesCapFor } from "@/lib/limits";
 import {
@@ -10,10 +10,7 @@ import {
 } from "@/lib/conversation";
 
 export async function POST(request: Request) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { supabase, user } = await getAuthedClient();
 
   if (!user) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
@@ -38,7 +35,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "not_found" }, { status: 404 });
   }
 
-  const plan = await getConversationPlan(user);
+  const plan = await getConversationPlan(user, supabase);
 
   if (!scenario.is_free && plan === null) {
     return NextResponse.json({ error: "payment_required" }, { status: 403 });
