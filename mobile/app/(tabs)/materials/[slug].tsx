@@ -1,5 +1,5 @@
 import { useLocalSearchParams } from "expo-router";
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, Pressable, View } from "react-native";
 import { AudioPlayer } from "@/components/materials/AudioPlayer";
 import { DialogueTranscript } from "@/components/materials/DialogueTranscript";
@@ -8,6 +8,7 @@ import { VocabList } from "@/components/materials/VocabList";
 import { LockCard } from "@/components/LockCard";
 import { Badge } from "@/components/ui/Badge";
 import { Card } from "@/components/ui/Card";
+import { ErrorState } from "@/components/ui/ErrorState";
 import { ScreenScroll } from "@/components/ui/ScreenContainer";
 import { Heading, Text } from "@/components/ui/Text";
 import { useAuth } from "@/context/AuthProvider";
@@ -19,18 +20,36 @@ export default function MaterialDetailScreen() {
   const { slug } = useLocalSearchParams<{ slug: string }>();
   const { user } = useAuth();
   const [material, setMaterial] = useState<MaterialDetail | null | undefined>(undefined);
+  const [loadError, setLoadError] = useState(false);
   const [subscribed, setSubscribed] = useState(false);
   const [showScript, setShowScript] = useState(false);
 
-  useEffect(() => {
-    if (typeof slug === "string") getMaterialBySlug(slug).then(setMaterial);
+  const reload = useCallback(() => {
+    if (typeof slug !== "string") return Promise.resolve();
+    return getMaterialBySlug(slug)
+      .then((data) => {
+        setMaterial(data);
+        setLoadError(false);
+      })
+      .catch(() => setLoadError(true));
   }, [slug]);
+
+  useEffect(() => {
+    reload();
+  }, [reload]);
 
   useEffect(() => {
     isListeningEntitled(user?.id).then(setSubscribed);
   }, [user]);
 
   if (material === undefined) {
+    if (loadError) {
+      return (
+        <ScreenScroll>
+          <ErrorState onRetry={reload} />
+        </ScreenScroll>
+      );
+    }
     return (
       <ScreenScroll contentContainerStyle={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
         <ActivityIndicator />

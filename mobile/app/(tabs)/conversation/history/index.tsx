@@ -4,6 +4,7 @@ import { ActivityIndicator, RefreshControl, View } from "react-native";
 import { Avatar } from "@/components/Avatar";
 import { Button } from "@/components/ui/Button";
 import { Card, PressableCard } from "@/components/ui/Card";
+import { ErrorState } from "@/components/ui/ErrorState";
 import { ScreenScroll } from "@/components/ui/ScreenContainer";
 import { SkeletonList } from "@/components/ui/Skeleton";
 import { Heading, Text } from "@/components/ui/Text";
@@ -16,11 +17,17 @@ export default function ConversationHistoryScreen() {
   const router = useRouter();
   const { user, initializing } = useAuth();
   const [sessions, setSessions] = useState<HistorySession[] | null>(null);
+  const [loadError, setLoadError] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
   const reload = useCallback(() => {
-    if (user) return listCompletedSessions().then(setSessions);
-    return Promise.resolve();
+    if (!user) return Promise.resolve();
+    return listCompletedSessions()
+      .then((data) => {
+        setSessions(data);
+        setLoadError(false);
+      })
+      .catch(() => setLoadError(true));
   }, [user]);
 
   useEffect(() => {
@@ -29,8 +36,11 @@ export default function ConversationHistoryScreen() {
 
   async function handleRefresh() {
     setRefreshing(true);
-    await reload();
-    setRefreshing(false);
+    try {
+      await reload();
+    } finally {
+      setRefreshing(false);
+    }
   }
 
   if (initializing) {
@@ -42,6 +52,13 @@ export default function ConversationHistoryScreen() {
   }
 
   if (user && !sessions) {
+    if (loadError) {
+      return (
+        <ScreenScroll contentContainerStyle={{ gap: 20 }}>
+          <ErrorState onRetry={reload} />
+        </ScreenScroll>
+      );
+    }
     return (
       <ScreenScroll contentContainerStyle={{ gap: 20 }}>
         <SkeletonList count={4} />

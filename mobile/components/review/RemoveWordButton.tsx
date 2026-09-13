@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import React, { useState } from "react";
-import { ActivityIndicator, Pressable } from "react-native";
+import { ActivityIndicator, Alert, Pressable } from "react-native";
 import { api } from "@/lib/api";
 import { useTheme } from "@/theme/ThemeProvider";
 
@@ -22,6 +22,8 @@ export function RemoveWordButton({
     try {
       await api.delete(endpoint);
       onRemoved();
+    } catch {
+      Alert.alert("削除に失敗しました", "通信環境をご確認のうえ、もう一度お試しください。");
     } finally {
       setLoading(false);
     }

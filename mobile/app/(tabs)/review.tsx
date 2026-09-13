@@ -4,6 +4,7 @@ import { ActivityIndicator, RefreshControl, View } from "react-native";
 import { ReviewWordsView } from "@/components/review/ReviewWordsView";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { ErrorState } from "@/components/ui/ErrorState";
 import { ScreenScroll } from "@/components/ui/ScreenContainer";
 import { SkeletonList } from "@/components/ui/Skeleton";
 import { Heading, Text } from "@/components/ui/Text";
@@ -16,11 +17,17 @@ export default function ReviewScreen() {
   const router = useRouter();
   const { user, initializing } = useAuth();
   const [words, setWords] = useState<ReviewWord[] | null>(null);
+  const [loadError, setLoadError] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
   const reload = useCallback(() => {
-    if (user) return listReviewWords().then(setWords);
-    return Promise.resolve();
+    if (!user) return Promise.resolve();
+    return listReviewWords()
+      .then((data) => {
+        setWords(data);
+        setLoadError(false);
+      })
+      .catch(() => setLoadError(true));
   }, [user]);
 
   useEffect(() => {
@@ -29,8 +36,11 @@ export default function ReviewScreen() {
 
   async function handleRefresh() {
     setRefreshing(true);
-    await reload();
-    setRefreshing(false);
+    try {
+      await reload();
+    } finally {
+      setRefreshing(false);
+    }
   }
 
   const header = (
@@ -66,6 +76,14 @@ export default function ReviewScreen() {
   }
 
   if (!words) {
+    if (loadError) {
+      return (
+        <ScreenScroll contentContainerStyle={{ gap: 20 }}>
+          {header}
+          <ErrorState onRetry={reload} />
+        </ScreenScroll>
+      );
+    }
     return (
       <ScreenScroll contentContainerStyle={{ gap: 20 }}>
         {header}

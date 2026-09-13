@@ -131,7 +131,10 @@ export async function connectRealtimeVoice(
   };
 
   pc.oniceconnectionstatechange = () => {
-    if (pc.iceConnectionState === "failed" || pc.iceConnectionState === "disconnected") {
+    // "disconnected" is often transient (a brief wifi<->cellular handoff)
+    // and can recover on its own — only "failed" means the session is
+    // truly unusable and callers should fall back to text mode.
+    if (pc.iceConnectionState === "failed") {
       callbacks.onConnectionUnstable();
     }
   };

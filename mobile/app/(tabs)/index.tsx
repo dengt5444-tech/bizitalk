@@ -34,13 +34,19 @@ export default function HomeScreen() {
   const theme = useTheme();
   const router = useRouter();
   const { user } = useAuth();
-  const [shouldOnboard, setShouldOnboard] = useState(false);
+  // null = still checking AsyncStorage. Rendering the home screen's
+  // content during that check causes a one-frame flash before the
+  // redirect kicks in on a first launch, so hold off entirely until we
+  // know which way to go.
+  const [shouldOnboard, setShouldOnboard] = useState<boolean | null>(null);
 
   useEffect(() => {
-    hasSeenOnboarding().then((seen) => {
-      if (!seen) setShouldOnboard(true);
-    });
+    hasSeenOnboarding().then((seen) => setShouldOnboard(!seen));
   }, []);
+
+  if (shouldOnboard === null) {
+    return null;
+  }
 
   if (shouldOnboard) {
     return <Redirect href="/onboarding" />;

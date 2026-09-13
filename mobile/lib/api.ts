@@ -44,6 +44,12 @@ async function request<T>(
   const body = isJson ? await response.json().catch(() => null) : null;
 
   if (!response.ok) {
+    if (response.status === 401) {
+      // Session expired or was revoked server-side. Sign out so every
+      // screen's existing "please log in" gate (driven by useAuth().user)
+      // picks this up automatically instead of the UI silently failing.
+      supabase.auth.signOut().catch(() => {});
+    }
     throw new ApiError(response.status, body?.error ?? `http_${response.status}`);
   }
 

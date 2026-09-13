@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { View } from "react-native";
+import { Alert, View } from "react-native";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Heading, Text } from "@/components/ui/Text";
@@ -115,16 +115,20 @@ function VocabQuiz({
     if (!isLoggedIn) return;
 
     const missed = questions.filter((q, i) => answers[i] !== q.answerIndex);
-    await Promise.all(
-      missed.map((q) =>
-        api.post("/api/review/words", {
-          sourceTitle: deckTitle,
-          word: q.word.word,
-          meaning: q.word.meaning,
-        }),
-      ),
-    );
-    setSavedCount(missed.length);
+    try {
+      await Promise.all(
+        missed.map((q) =>
+          api.post("/api/review/words", {
+            sourceTitle: deckTitle,
+            word: q.word.word,
+            meaning: q.word.meaning,
+          }),
+        ),
+      );
+      setSavedCount(missed.length);
+    } catch {
+      Alert.alert("保存に失敗しました", "間違えた単語を復習リストに保存できませんでした。通信環境をご確認のうえ、もう一度お試しください。");
+    }
   }
 
   function handleRetry() {

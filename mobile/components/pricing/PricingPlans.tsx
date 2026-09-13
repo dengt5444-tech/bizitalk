@@ -176,17 +176,29 @@ export function PricingPlans({
   }
 
   async function handleIosPurchaseSuccess(purchase: Purchase) {
+    const signedTransactionInfo = purchase.purchaseToken;
     try {
-      const signedTransactionInfo = purchase.purchaseToken;
       if (!signedTransactionInfo) throw new Error("missing_jws");
       await verifyApplePurchase(signedTransactionInfo);
-      await finishTransaction({ purchase, isConsumable: false });
-      onCheckoutReturn?.();
     } catch {
       setError("購入の確認に失敗しました。時間をおいて「購入を復元」からもう一度お試しください。");
-    } finally {
       setLoadingPlan(null);
       setRestoring(false);
+      return;
+    }
+
+    // Verified and the entitlement is already synced server-side — the
+    // purchase itself succeeded from here on, even if finishing the local
+    // StoreKit transaction below fails. Don't show a false "purchase
+    // failed" error for that; StoreKit just replays the unfinished
+    // transaction on the next launch/restore instead of losing it.
+    onCheckoutReturn?.();
+    setLoadingPlan(null);
+    setRestoring(false);
+    try {
+      await finishTransaction({ purchase, isConsumable: false });
+    } catch {
+      // Best-effort — see comment above.
     }
   }
 
@@ -212,11 +224,11 @@ export function PricingPlans({
     }
   }
 
-  async function handleManage(plan: "conversation" | "listening") {
+  async function handleManage(portalPlan: "conversation" | "listening", cardKey: CheckoutPlan) {
     setError("");
-    setLoadingPlan(plan === "listening" ? "listening" : "standard");
+    setLoadingPlan(cardKey);
     try {
-      const result = await openBillingPortal(plan);
+      const result = await openBillingPortal(portalPlan);
       if (result.type === "success") onCheckoutReturn?.();
     } catch {
       setError("管理画面を開けませんでした。時間をおいて再度お試しください。");
@@ -242,6 +254,17 @@ export function PricingPlans({
           const isLoading = loadingPlan === plan.key;
           const iosSku = IAP_PRODUCT_ID_FOR_PLAN[plan.key];
           const iosProduct = subscriptions.find((subscription) => subscription.id === iosSku);
+
+          // Any active conversation-tier plan (trial/standard/unlimited)
+          // already includes listening access and is mutually exclusive
+          // with the other two tiers. Block purchasing a second,
+          // overlapping subscription instead of letting the user pay
+          // twice — this matters most on iOS, where StoreKit has no
+          // server-side awareness of the user's other subscriptions.
+          const hasActiveConversationPlan = conversationPlan !== null;
+          const coveredByConversationPlan = plan.key === "listening" && hasActiveConversationPlan && !current;
+          const overlapsAnotherConversationPlan = plan.key !== "listening" && hasActiveConversationPlan && !current;
+          const blockedByExistingPlan = coveredByConversationPlan || overlapsAnotherConversationPlan;
 
           return (
             <Card key={plan.key} style={{ alignItems: "center", gap: 14, paddingVertical: 24 }}>
@@ -290,8 +313,24 @@ export function PricingPlans({
                     label="お支払い方法の変更・解約はこちら"
                     variant="secondary"
                     loading={isLoading}
-                    onPress={() => handleManage(plan.key === "listening" ? "listening" : "conversation")}
+                    onPress={() => handleManage(plan.key === "listening" ? "listening" : "conversation", plan.key)}
                   />
+                </View>
+              ) : blockedByExistingPlan ? (
+                <View
+                  style={{
+                    alignSelf: "stretch",
+                    borderRadius: 999,
+                    paddingVertical: 13,
+                    paddingHorizontal: 16,
+                    backgroundColor: theme.colors.paperDim,
+                  }}
+                >
+                  <Text size={13} color="inkFaint" style={{ textAlign: "center" }}>
+                    {coveredByConversationPlan
+                      ? "ご利用中の会話プランに含まれています"
+                      : "他の会話プランをご利用中です"}
+                  </Text>
                 </View>
               ) : Platform.OS === "ios" ? (
                 // Apple's App Store guideline 3.1.1 requires digital

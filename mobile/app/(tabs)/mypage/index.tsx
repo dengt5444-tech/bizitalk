@@ -8,6 +8,7 @@ import { DangerZone } from "@/components/settings/DangerZone";
 import { SettingsLinks } from "@/components/settings/SettingsLinks";
 import { Button } from "@/components/ui/Button";
 import { Card, PressableCard } from "@/components/ui/Card";
+import { ErrorState } from "@/components/ui/ErrorState";
 import { GradientHero } from "@/components/ui/GradientHero";
 import { ScreenScroll } from "@/components/ui/ScreenContainer";
 import { SkeletonList } from "@/components/ui/Skeleton";
@@ -23,18 +24,26 @@ export default function MyPageScreen() {
   const { user, initializing, signOut } = useAuth();
 
   const [dashboard, setDashboard] = useState<DashboardData | null>(null);
+  const [dashboardError, setDashboardError] = useState(false);
   const [conversationPlan, setConversationPlan] = useState<Awaited<ReturnType<typeof getConversationPlan>>>(null);
   const [listeningSubscribed, setListeningSubscribed] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
   const reloadEntitlements = useCallback(() => {
-    getConversationPlan(user?.id).then(setConversationPlan);
-    isListeningEntitled(user?.id).then(setListeningSubscribed);
+    return Promise.all([
+      getConversationPlan(user?.id).then(setConversationPlan).catch(() => {}),
+      isListeningEntitled(user?.id).then(setListeningSubscribed).catch(() => {}),
+    ]);
   }, [user]);
 
   const reloadDashboard = useCallback(() => {
-    if (user) return loadDashboard().then(setDashboard);
-    return Promise.resolve();
+    if (!user) return Promise.resolve();
+    return loadDashboard()
+      .then((data) => {
+        setDashboard(data);
+        setDashboardError(false);
+      })
+      .catch(() => setDashboardError(true));
   }, [user]);
 
   useEffect(() => {
@@ -47,8 +56,11 @@ export default function MyPageScreen() {
 
   async function handleRefresh() {
     setRefreshing(true);
-    await Promise.all([reloadEntitlements(), reloadDashboard()]);
-    setRefreshing(false);
+    try {
+      await Promise.all([reloadEntitlements(), reloadDashboard()]);
+    } finally {
+      setRefreshing(false);
+    }
   }
 
   if (initializing) {
@@ -87,7 +99,8 @@ export default function MyPageScreen() {
         </Card>
       )}
 
-      {user && !dashboard && <SkeletonList count={3} />}
+      {user && !dashboard && dashboardError && <ErrorState onRetry={reloadDashboard} />}
+      {user && !dashboard && !dashboardError && <SkeletonList count={3} />}
 
       {user && dashboard && (
         <>

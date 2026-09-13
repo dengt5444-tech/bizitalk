@@ -1,11 +1,12 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, View } from "react-native";
 import { Avatar } from "@/components/Avatar";
 import { ConversationRoom } from "@/components/conversation/ConversationRoom";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { ErrorState } from "@/components/ui/ErrorState";
 import { ScreenScroll } from "@/components/ui/ScreenContainer";
 import { Heading, Text } from "@/components/ui/Text";
 import { useAuth } from "@/context/AuthProvider";
@@ -18,17 +19,35 @@ export default function ConversationScenarioScreen() {
   const router = useRouter();
   const { user } = useAuth();
   const [scenario, setScenario] = useState<ScenarioDetail | null | undefined>(undefined);
+  const [loadError, setLoadError] = useState(false);
   const [subscribed, setSubscribed] = useState(false);
 
-  useEffect(() => {
-    if (typeof slug === "string") getScenarioBySlug(slug).then(setScenario);
+  const reload = useCallback(() => {
+    if (typeof slug !== "string") return Promise.resolve();
+    return getScenarioBySlug(slug)
+      .then((data) => {
+        setScenario(data);
+        setLoadError(false);
+      })
+      .catch(() => setLoadError(true));
   }, [slug]);
+
+  useEffect(() => {
+    reload();
+  }, [reload]);
 
   useEffect(() => {
     isEntitled(user?.id).then(setSubscribed);
   }, [user]);
 
   if (scenario === undefined) {
+    if (loadError) {
+      return (
+        <ScreenScroll>
+          <ErrorState onRetry={reload} />
+        </ScreenScroll>
+      );
+    }
     return (
       <ScreenScroll contentContainerStyle={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
         <ActivityIndicator />

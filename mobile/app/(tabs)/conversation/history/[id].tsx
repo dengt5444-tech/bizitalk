@@ -1,10 +1,11 @@
 import { useLocalSearchParams } from "expo-router";
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, Pressable, View } from "react-native";
 import { Avatar } from "@/components/Avatar";
 import { ChatBubble } from "@/components/conversation/ChatBubble";
 import { FeedbackPanel } from "@/components/conversation/FeedbackPanel";
 import { Card } from "@/components/ui/Card";
+import { ErrorState } from "@/components/ui/ErrorState";
 import { ScreenScroll } from "@/components/ui/ScreenContainer";
 import { Heading, Text } from "@/components/ui/Text";
 import { getSessionDetail, type SessionDetail } from "@/lib/queries/conversationHistory";
@@ -12,13 +13,31 @@ import { getSessionDetail, type SessionDetail } from "@/lib/queries/conversation
 export default function ConversationHistoryDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const [session, setSession] = useState<SessionDetail | null | undefined>(undefined);
+  const [loadError, setLoadError] = useState(false);
   const [showTranscript, setShowTranscript] = useState(false);
 
-  useEffect(() => {
-    if (typeof id === "string") getSessionDetail(id).then(setSession);
+  const reload = useCallback(() => {
+    if (typeof id !== "string") return Promise.resolve();
+    return getSessionDetail(id)
+      .then((data) => {
+        setSession(data);
+        setLoadError(false);
+      })
+      .catch(() => setLoadError(true));
   }, [id]);
 
+  useEffect(() => {
+    reload();
+  }, [reload]);
+
   if (session === undefined) {
+    if (loadError) {
+      return (
+        <ScreenScroll>
+          <ErrorState onRetry={reload} />
+        </ScreenScroll>
+      );
+    }
     return (
       <ScreenScroll contentContainerStyle={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
         <ActivityIndicator />

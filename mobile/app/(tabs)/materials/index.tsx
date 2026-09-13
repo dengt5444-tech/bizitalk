@@ -3,6 +3,7 @@ import React, { useCallback, useEffect, useState } from "react";
 import { RefreshControl, View } from "react-native";
 import { Badge } from "@/components/ui/Badge";
 import { PressableCard } from "@/components/ui/Card";
+import { ErrorState } from "@/components/ui/ErrorState";
 import { ScreenScroll } from "@/components/ui/ScreenContainer";
 import { SkeletonList } from "@/components/ui/Skeleton";
 import { Heading, Text } from "@/components/ui/Text";
@@ -17,10 +18,18 @@ export default function MaterialsScreen() {
   const router = useRouter();
   const { user } = useAuth();
   const [materials, setMaterials] = useState<MaterialSummary[] | null>(null);
+  const [loadError, setLoadError] = useState(false);
   const [subscribed, setSubscribed] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
-  const reload = useCallback(() => listMaterials().then(setMaterials), []);
+  const reload = useCallback(() => {
+    return listMaterials()
+      .then((data) => {
+        setMaterials(data);
+        setLoadError(false);
+      })
+      .catch(() => setLoadError(true));
+  }, []);
 
   useEffect(() => {
     reload();
@@ -32,8 +41,11 @@ export default function MaterialsScreen() {
 
   async function handleRefresh() {
     setRefreshing(true);
-    await reload();
-    setRefreshing(false);
+    try {
+      await reload();
+    } finally {
+      setRefreshing(false);
+    }
   }
 
   const grouped = useCallback(() => {
@@ -47,6 +59,13 @@ export default function MaterialsScreen() {
   }, [materials]);
 
   if (!materials) {
+    if (loadError) {
+      return (
+        <ScreenScroll contentContainerStyle={{ gap: 28 }}>
+          <ErrorState onRetry={reload} />
+        </ScreenScroll>
+      );
+    }
     return (
       <ScreenScroll contentContainerStyle={{ gap: 28 }}>
         <SkeletonList count={4} />
@@ -74,6 +93,12 @@ export default function MaterialsScreen() {
           無料お試しの教材から、超上級のビジネス英語まで。リスニングプランへの登録でレベルを問わず全教材が聞き放題になります。
         </Text>
       </View>
+
+      {loadError && (
+        <Text size={13} color="rose">
+          最新の情報を取得できませんでした。表示中の内容は古い可能性があります。
+        </Text>
+      )}
 
       {LEVEL_ORDER.map((level) => {
         const items = groups.get(level) ?? [];

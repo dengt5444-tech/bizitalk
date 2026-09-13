@@ -1,8 +1,9 @@
 import { useLocalSearchParams } from "expo-router";
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, View } from "react-native";
 import { LockCard } from "@/components/LockCard";
 import { Badge } from "@/components/ui/Badge";
+import { ErrorState } from "@/components/ui/ErrorState";
 import { ScreenScroll } from "@/components/ui/ScreenContainer";
 import { Heading, Text } from "@/components/ui/Text";
 import { VocabDeckPractice } from "@/components/vocab/VocabDeckPractice";
@@ -14,17 +15,35 @@ export default function VocabDeckScreen() {
   const { slug } = useLocalSearchParams<{ slug: string }>();
   const { user } = useAuth();
   const [deck, setDeck] = useState<VocabDeckSummary | null | undefined>(undefined);
+  const [loadError, setLoadError] = useState(false);
   const [subscribed, setSubscribed] = useState(false);
 
-  useEffect(() => {
-    if (typeof slug === "string") getVocabDeckBySlug(slug).then(setDeck);
+  const reload = useCallback(() => {
+    if (typeof slug !== "string") return Promise.resolve();
+    return getVocabDeckBySlug(slug)
+      .then((data) => {
+        setDeck(data);
+        setLoadError(false);
+      })
+      .catch(() => setLoadError(true));
   }, [slug]);
+
+  useEffect(() => {
+    reload();
+  }, [reload]);
 
   useEffect(() => {
     isListeningEntitled(user?.id).then(setSubscribed);
   }, [user]);
 
   if (deck === undefined) {
+    if (loadError) {
+      return (
+        <ScreenScroll>
+          <ErrorState onRetry={reload} />
+        </ScreenScroll>
+      );
+    }
     return (
       <ScreenScroll contentContainerStyle={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
         <ActivityIndicator />

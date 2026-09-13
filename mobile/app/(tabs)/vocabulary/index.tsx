@@ -3,6 +3,7 @@ import React, { useCallback, useEffect, useState } from "react";
 import { RefreshControl, View } from "react-native";
 import { Badge } from "@/components/ui/Badge";
 import { PressableCard } from "@/components/ui/Card";
+import { ErrorState } from "@/components/ui/ErrorState";
 import { ScreenScroll } from "@/components/ui/ScreenContainer";
 import { SkeletonList } from "@/components/ui/Skeleton";
 import { Heading, Text } from "@/components/ui/Text";
@@ -16,10 +17,18 @@ export default function VocabularyScreen() {
   const router = useRouter();
   const { user } = useAuth();
   const [decks, setDecks] = useState<VocabDeckSummary[] | null>(null);
+  const [loadError, setLoadError] = useState(false);
   const [subscribed, setSubscribed] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
-  const reload = useCallback(() => listVocabDecks().then(setDecks), []);
+  const reload = useCallback(() => {
+    return listVocabDecks()
+      .then((data) => {
+        setDecks(data);
+        setLoadError(false);
+      })
+      .catch(() => setLoadError(true));
+  }, []);
 
   useEffect(() => {
     reload();
@@ -31,11 +40,21 @@ export default function VocabularyScreen() {
 
   async function handleRefresh() {
     setRefreshing(true);
-    await reload();
-    setRefreshing(false);
+    try {
+      await reload();
+    } finally {
+      setRefreshing(false);
+    }
   }
 
   if (!decks) {
+    if (loadError) {
+      return (
+        <ScreenScroll contentContainerStyle={{ gap: 20 }}>
+          <ErrorState onRetry={reload} />
+        </ScreenScroll>
+      );
+    }
     return (
       <ScreenScroll contentContainerStyle={{ gap: 20 }}>
         <SkeletonList count={4} />

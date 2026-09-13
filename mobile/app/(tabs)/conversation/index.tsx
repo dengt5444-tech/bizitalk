@@ -4,6 +4,7 @@ import { RefreshControl, View } from "react-native";
 import { Avatar } from "@/components/Avatar";
 import { Badge } from "@/components/ui/Badge";
 import { PressableCard } from "@/components/ui/Card";
+import { ErrorState } from "@/components/ui/ErrorState";
 import { ScreenScroll } from "@/components/ui/ScreenContainer";
 import { SkeletonList } from "@/components/ui/Skeleton";
 import { Heading, Text } from "@/components/ui/Text";
@@ -19,10 +20,18 @@ export default function ConversationScreen() {
   const router = useRouter();
   const { user } = useAuth();
   const [scenarios, setScenarios] = useState<ScenarioSummary[] | null>(null);
+  const [loadError, setLoadError] = useState(false);
   const [subscribed, setSubscribed] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
-  const reload = useCallback(() => listScenarios().then(setScenarios), []);
+  const reload = useCallback(() => {
+    return listScenarios()
+      .then((data) => {
+        setScenarios(data);
+        setLoadError(false);
+      })
+      .catch(() => setLoadError(true));
+  }, []);
 
   useEffect(() => {
     reload();
@@ -34,11 +43,21 @@ export default function ConversationScreen() {
 
   async function handleRefresh() {
     setRefreshing(true);
-    await reload();
-    setRefreshing(false);
+    try {
+      await reload();
+    } finally {
+      setRefreshing(false);
+    }
   }
 
   if (!scenarios) {
+    if (loadError) {
+      return (
+        <ScreenScroll contentContainerStyle={{ gap: 28 }}>
+          <ErrorState onRetry={reload} />
+        </ScreenScroll>
+      );
+    }
     return (
       <ScreenScroll contentContainerStyle={{ gap: 28 }}>
         <SkeletonList count={4} />
@@ -75,10 +94,16 @@ export default function ConversationScreen() {
         </Text>
       </View>
 
+      {loadError && (
+        <Text size={13} color="rose">
+          最新の情報を取得できませんでした。表示中の内容は古い可能性があります。
+        </Text>
+      )}
+
       {freeTalk && (
         <PressableCard
           onPress={() => router.push(`/(tabs)/conversation/${freeTalk.slug}`)}
-          style={{ gap: 8, borderColor: "#1d4ed855" }}
+          style={{ gap: 8, borderColor: `${theme.colors.signal}55` }}
         >
           <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
             <Avatar name={freeTalk.persona_name} size="sm" />

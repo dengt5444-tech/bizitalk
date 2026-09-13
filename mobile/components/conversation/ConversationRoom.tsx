@@ -2,7 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { createAudioPlayer, type AudioPlayer } from "expo-audio";
 import React, { useEffect, useRef, useState } from "react";
-import { ActivityIndicator, Pressable, View } from "react-native";
+import { ActivityIndicator, AppState, Pressable, View } from "react-native";
 import { Avatar } from "@/components/Avatar";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -52,6 +52,12 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
 
   const playerRef = useRef<AudioPlayer | null>(null);
   const realtimeRef = useRef<RealtimeController | null>(null);
+  // Tracks connectRealtimeVoice() while it's still negotiating, i.e. before
+  // realtimeRef is assigned. Without this, leaving the screen mid-connect
+  // (phase === "connecting") orphans the in-flight RTCPeerConnection and
+  // open microphone stream — the unmount cleanup below would find
+  // realtimeRef.current still null and close nothing.
+  const connectPromiseRef = useRef<Promise<RealtimeController> | null>(null);
   const transcriptRef = useRef<ConversationTurn[]>([]);
   const processedIdsRef = useRef<Set<string>>(new Set());
   const openingHandledRef = useRef(false);
@@ -62,9 +68,38 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
   useEffect(() => {
     return () => {
       playerRef.current?.remove();
-      realtimeRef.current?.close();
+      if (realtimeRef.current) {
+        realtimeRef.current.close();
+      } else if (connectPromiseRef.current) {
+        connectPromiseRef.current.then((controller) => controller.close()).catch(() => {});
+      }
     };
   }, []);
+
+  // If the app is backgrounded mid-call (an incoming phone call, switching
+  // apps, screen lock), the OS will most likely suspend the WebRTC session
+  // without telling us cleanly. Rather than leaving the screen frozen on a
+  // dead connection, end the call explicitly and say so.
+  useEffect(() => {
+    const inRealtimeCall = mode === "realtime" && (phase === "connecting" || phase === "chatting");
+    if (!inRealtimeCall) return;
+
+    const subscription = AppState.addEventListener("change", (nextState) => {
+      if (nextState === "active") return;
+      if (realtimeRef.current) {
+        realtimeRef.current.close();
+        realtimeRef.current = null;
+      } else if (connectPromiseRef.current) {
+        connectPromiseRef.current.then((controller) => controller.close()).catch(() => {});
+        connectPromiseRef.current = null;
+      }
+      setPhase("idle");
+      setMode(null);
+      setError("アプリがバックグラウンドになったため、音声通話を終了しました。もう一度話しかけると再開できます。");
+    });
+
+    return () => subscription.remove();
+  }, [mode, phase]);
 
   function pushTurn(turn: ConversationTurn) {
     const next = [...transcriptRef.current, turn];
@@ -148,16 +183,31 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
           const tokenData = await api.post<{ clientSecret: string }>(
             `/api/conversation/sessions/${data.sessionId}/realtime-token`,
           );
-          const controller = await connectRealtimeVoice(tokenData.clientSecret, scenario.openingLine, {
+          const connectPromise = connectRealtimeVoice(tokenData.clientSecret, scenario.openingLine, {
             onUserSpeakingChange: setUserSpeaking,
             onAssistantSpeakingChange: setAssistantSpeaking,
             onAssistantTurn: (text, itemId) => appendRealtimeTurn("assistant", text, itemId),
             onUserTurn: (text, itemId) => appendRealtimeTurn("user", text, itemId),
-            onConnectionUnstable: () => setError("音声接続が不安定になりました。テキストで会話を続けられます。"),
+            onConnectionUnstable: () => {
+              // A hard ICE failure (not a transient "disconnected", which
+              // can self-recover on a brief network blip) — the voice
+              // session is unusable. Actually switch to text mode instead
+              // of only announcing it: mode must change and realtimeRef
+              // must clear, or handleSend keeps routing through the dead
+              // data channel.
+              realtimeRef.current?.close();
+              realtimeRef.current = null;
+              setMode("text");
+              setError("音声接続が切断されたため、テキストモードに切り替えました。下の入力欄からメッセージを送信できます。");
+            },
           });
+          connectPromiseRef.current = connectPromise;
+          const controller = await connectPromise;
+          connectPromiseRef.current = null;
           realtimeRef.current = controller;
           setPhase("chatting");
         } catch {
+          connectPromiseRef.current = null;
           realtimeRef.current?.close();
           realtimeRef.current = null;
           setMode("text");
