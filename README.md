@@ -88,6 +88,10 @@ node scripts/seed-vocab-decks.mjs
 
 Vercelにこのリポジトリを接続し、`.env.example` に記載の環境変数を設定してください。`STRIPE_PRICE_ID`(スタンダード)・`STRIPE_PRICE_ID_TRIAL`(お試し)・`STRIPE_PRICE_ID_UNLIMITED`(使い放題)・`STRIPE_PRICE_ID_LISTENING`(リスニング)は、それぞれ別々のStripe価格IDです。
 
+## エラー監視(Sentry)
+
+`@sentry/nextjs` を導入済みですが、`SENTRY_DSN` / `NEXT_PUBLIC_SENTRY_DSN` を設定するまでは何も送信しない安全な無効状態です。本番運用を始める前に、Sentryで無料アカウントを作成しDSNを発行してから、Vercelの環境変数に設定してください。`SENTRY_ORG` / `SENTRY_PROJECT` / `SENTRY_AUTH_TOKEN` はソースマップのアップロード(スタックトレースを読みやすくする)にのみ使用し、未設定でもビルドは通ります。
+
 ## 紹介プログラムについて
 
 AI会話プランの購入時に紹介者へ¥1,000を支払う仕組みは、`src/lib/limits.ts` の各プランの上限(分)を算出する際に「全購入が紹介経由」という最悪ケースとしてコストに織り込み済みです(ただし¥980のお試しプランは、¥1,000の紹介料がプラン価格そのものを上回ってしまうため、このプランについては紹介コストなしとして計算しています)。

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import * as Sentry from "@sentry/nextjs";
 import { createClient } from "@/lib/supabase/server";
 import { createStripeClient } from "@/lib/stripe";
 import { resolveReferralCode } from "@/lib/referrals";
@@ -52,9 +53,9 @@ export async function POST(request: Request) {
     // price ID for one specific plan is easy to spot — this env var is
     // set separately per Vercel environment (Production/Preview/Development)
     // and requires a new deployment to take effect after being added.
-    console.error(
-      `Checkout misconfigured for plan "${plan}": env var ${PRICE_ENV_VAR_FOR_PLAN[plan]} is not set.`,
-    );
+    const message = `Checkout misconfigured for plan "${plan}": env var ${PRICE_ENV_VAR_FOR_PLAN[plan]} is not set.`;
+    console.error(message);
+    Sentry.captureMessage(message, "error");
     return NextResponse.json(
       {
         error:
@@ -101,6 +102,7 @@ export async function POST(request: Request) {
     // caller with no way to tell which plan or why.
     const message = err instanceof Error ? err.message : "unknown error";
     console.error(`Checkout session creation failed for plan "${plan}":`, message);
+    Sentry.captureException(err, { tags: { plan } });
     return NextResponse.json(
       { error: "決済ページの作成に失敗しました。もう一度お試しください。" },
       { status: 500 },
