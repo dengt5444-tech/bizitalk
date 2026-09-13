@@ -70,7 +70,7 @@ npm run dev
 
 ### 初回セットアップ
 
-1. Supabaseプロジェクトを作成し、SQL Editorで `supabase/migrations/0001_init.sql` → `0002_vocab_decks.sql` → `0003_conversation_minutes.sql` → `0004_free_talk.sql` → `0005_referrals.sql` → `0006_influencer_referrals.sql` の順に実行
+1. Supabaseプロジェクトを作成し、SQL Editorで `supabase/migrations/0001_init.sql` → `0002_vocab_decks.sql` → `0003_conversation_minutes.sql` → `0004_free_talk.sql` → `0005_referrals.sql` → `0006_influencer_referrals.sql` → `0007_waitlist.sql` の順に実行
 2. 以下のスクリプトを実行(`NEXT_PUBLIC_SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` を環境変数として読み込みます)
 
 ```bash
@@ -98,6 +98,11 @@ Vercelにこのリポジトリを接続し、`.env.example` に記載の環境�
 
 - `/admin/usage`: 今月のAI会話(リアルタイム音声)の利用時間・プラン別の内訳・`src/lib/limits.ts` の見積もりコスト(¥16/分)での推定金額。OpenAIの実際の請求額と比較することで、この見積もりが正しいか検証できます。
 - `/admin/referrals`: 発行済みの紹介コードごとの登録数・有効化数。
+- `/admin/waitlist`: `/early-access` から登録されたメールアドレスの一覧。
+
+## 先行モニター募集ページ(`/early-access`)
+
+正式リリース前に、SNSなどで告知して先行モニターを募集するための単独ランディングページです。メールアドレスを入力すると `waitlist` テーブルに保存されます(重複登録は自動的にエラーにせず「登録済み」として扱います)。ログイン不要・匿名で使えます。
 
 ## 将来のネイティブアプリ化について
 

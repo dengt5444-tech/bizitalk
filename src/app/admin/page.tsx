@@ -15,6 +15,11 @@ const LINKS = [
     title: "紹介コード",
     description: "発行済みの紹介コードごとの登録数・有効化数。",
   },
+  {
+    href: "/admin/waitlist",
+    title: "先行モニター応募リスト",
+    description: "/early-access から登録されたメールアドレスの一覧。",
+  },
 ];
 
 export default async function AdminHomePage() {
