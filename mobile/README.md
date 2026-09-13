@@ -53,6 +53,32 @@ npx eas build --profile development --platform android
 
 このクラウド実行環境にはXcode/Android Studioが無いため、コード自体は書けても実機/シミュレータでの動作確認はできていません。上記のビルドはユーザー側の環境(または EAS Build)で行ってください。
 
+## リリースビルド・ストア提出(EAS Build)
+
+`eas.json` に development / preview / production の3つのビルドプロファイルを用意しています。
+
+```bash
+npm install -g eas-cli
+eas login                 # Expo(https://expo.dev)アカウントでログイン
+eas init                  # このプロジェクトをEASに紐付け(app.jsonにprojectIdが追記されます)
+
+# 動作確認用(社内配布・実機テスト向け、開発ビルド/簡易ビルド)
+npm run build:preview:ios
+npm run build:preview:android
+
+# ストア提出用
+npm run build:prod:ios
+npm run build:prod:android
+
+# ビルドしたバイナリをストアに提出
+npm run submit:ios
+npm run submit:android
+```
+
+`cli.appVersionSource: "remote"`(`eas.json`)により、バージョン番号(iOSのbuild number・Androidのversion code)はEAS側で自動管理・自動採番されます(`production` プロファイルは `autoIncrement: true`)。
+
+ストア提出(`eas submit`)には、Apple Developer Program / Google Play Console のアカウントでの追加認証が必要です(詳しくは下記「リリースに向けてユーザー側で必要な作業」を参照)。
+
 ## ディレクトリ構成
 
 ```
@@ -86,3 +112,5 @@ mobile/
 - マジックリンクによるログイン(アプリ内ディープリンク)は未対応です。6桁コードでのログインのみ実装しています。
 - テキストモードでの音声入力(Web版のWeb Speech APIによるディクテーション)は未実装です。
 - 紹介プログラムのURL経由(`?ref=`)でのコード自動入力は未対応です(手入力のみ)。
+- **iOSでの課金**: AppleはApp内で消費するデジタルサブスクリプションにStoreKit(App内課金)の使用を原則義務付けており、このAI会話サービスは外部決済を許可される「リーダーアプリ」の例外に該当しません。StoreKit対応(別途 App Store Connect でのプロダクト設定が必要)が完了するまでの暫定対応として、iOS版では新規プランへの決済ボタン・外部決済へのリンクを一切表示していません(`components/pricing/PricingPlans.tsx`)。**ストア審査に出す前に、この対応方針(StoreKit実装 or 現状維持)を確認してください** — 詳細は下記の「リリースに向けてユーザー側で必要な作業」を参照。
+- アカウント削除は実装済みです(マイページの「アカウントを削除」)。Apple審査ガイドライン5.1.1(v)の要件を満たします。
