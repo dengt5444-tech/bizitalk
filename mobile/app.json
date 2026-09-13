@@ -14,9 +14,8 @@
     "android": {
       "package": "com.bizitalk.app",
       "adaptiveIcon": {
-        "backgroundColor": "#F5F7FA",
+        "backgroundColor": "#12182B",
         "foregroundImage": "./assets/android-icon-foreground.png",
-        "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false
@@ -29,6 +28,18 @@
       "expo-status-bar",
       "expo-font",
       "expo-asset",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 220,
+          "resizeMode": "contain",
+          "backgroundColor": "#f5f7fa",
+          "dark": {
+            "backgroundColor": "#0b0f1a"
+          }
+        }
+      ],
       [
         "expo-audio",
         {
