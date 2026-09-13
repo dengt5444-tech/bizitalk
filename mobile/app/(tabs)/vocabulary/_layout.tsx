@@ -15,6 +15,7 @@ export default function VocabularyLayout() {
       }}
     >
       <Stack.Screen name="index" options={{ title: "単語帳" }} />
+      <Stack.Screen name="[slug]" options={{ title: "" }} />
     </Stack>
   );
 }
