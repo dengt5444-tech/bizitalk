@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "main": "expo-router/entry",
   "dependencies": {
+    "@config-plugins/react-native-webrtc": "^15.0.2",
     "@expo-google-fonts/noto-sans-jp": "^0.4.3",
     "@expo-google-fonts/zen-old-mincho": "^0.4.1",
     "@expo/metro-runtime": "~57.0.15",
@@ -25,7 +26,8 @@
     "react-native-safe-area-context": "~5.7.0",
     "react-native-screens": "~4.26.0",
     "react-native-svg": "15.15.4",
-    "react-native-url-polyfill": "^4.0.0"
+    "react-native-url-polyfill": "^4.0.0",
+    "react-native-webrtc": "^124.0.8"
   },
   "devDependencies": {
     "@types/react": "~19.2.2",
@@ -35,8 +37,8 @@
   },
   "scripts": {
     "start": "expo start",
-    "android": "expo start --android",
-    "ios": "expo start --ios",
+    "android": "expo run:android",
+    "ios": "expo run:ios",
     "web": "expo start --web",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit"
