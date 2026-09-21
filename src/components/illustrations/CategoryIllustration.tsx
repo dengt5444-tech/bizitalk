@@ -53,9 +53,9 @@ function Glyph({ category }: { category: ScenarioCategory }) {
 
 const GRADIENTS: Record<ScenarioCategory, [string, string]> = {
   teammates: ["#3b82f6", "#1d4ed8"],
-  international: ["#f0ad5e", "#b45309"],
-  clients: ["#1d4ed8", "#0f2c74"],
-  leadership: ["#b45309", "#7c3a09"],
+  international: ["#2dd4bf", "#0d9488"],
+  clients: ["#a78bfa", "#7c3aed"],
+  leadership: ["#f0ad5e", "#b45309"],
 };
 
 export function CategoryIllustration({

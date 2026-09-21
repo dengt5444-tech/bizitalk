@@ -114,14 +114,15 @@ export default async function DashboardPage() {
       </p>
 
       <div className="mt-10 grid grid-cols-2 gap-4 sm:grid-cols-4">
-        <StatTile label="継続日数" value={`${streak}`} unit="日" />
-        <StatTile label="今週の会話" value={`${thisWeekCount}`} unit="回" />
+        <StatTile label="継続日数" value={`${streak}`} unit="日" accent="signal" />
+        <StatTile label="今週の会話" value={`${thisWeekCount}`} unit="回" accent="mint" />
         <StatTile
           label="平均フルエンシー"
           value={avgFluency !== null ? `${avgFluency}` : "-"}
           unit="/5"
+          accent="violet"
         />
-        <StatTile label="保存した単語" value={`${vocabCount ?? 0}`} unit="語" />
+        <StatTile label="保存した単語" value={`${vocabCount ?? 0}`} unit="語" accent="amber" />
       </div>
 
       {trend.length >= 2 && (
@@ -251,19 +252,28 @@ export default async function DashboardPage() {
   );
 }
 
+const STAT_ACCENTS = {
+  signal: "text-signal",
+  mint: "text-mint-dim",
+  violet: "text-violet-dim",
+  amber: "text-amber-dim",
+} as const;
+
 function StatTile({
   label,
   value,
   unit,
+  accent,
 }: {
   label: string;
   value: string;
   unit: string;
+  accent: keyof typeof STAT_ACCENTS;
 }) {
   return (
     <div className="rounded-2xl bg-surface p-5 shadow-card transition duration-300 hover:-translate-y-1 hover:shadow-card-hover">
       <p className="text-xs text-ink-faint">{label}</p>
-      <p className="mt-2 font-display text-3xl font-semibold text-ink">
+      <p className={`mt-2 font-display text-3xl font-semibold ${STAT_ACCENTS[accent]}`}>
         {value}
         <span className="ml-1 text-sm font-normal text-ink-faint">{unit}</span>
       </p>

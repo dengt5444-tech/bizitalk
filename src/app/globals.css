@@ -22,6 +22,21 @@
   --color-rose: #b91c1c;
   --color-rose-tint: #fbe9e9;
 
+  /* M3-style secondary/tertiary tonal accents — used alongside signal
+     blue to give scenario categories, feature chips and pricing plans
+     their own identity, instead of one blue repeated everywhere. */
+  --color-mint: #0d9488;
+  --color-mint-dim: #0f766e;
+  --color-mint-tint: #e3f6f2;
+
+  --color-violet: #7c3aed;
+  --color-violet-dim: #6025c0;
+  --color-violet-tint: #f1ecfd;
+
+  --color-blossom: #db2777;
+  --color-blossom-dim: #a3175a;
+  --color-blossom-tint: #fce7f3;
+
   /* Material Design 3 style elevation: soft, layered shadows rather than
      hard borders, used sparingly on cards that benefit from feeling
      "raised" (vs. flat bordered surfaces used for dense lists). */
@@ -54,6 +69,18 @@
     --color-rose: #e08a8a;
     --color-rose-tint: #2b1a1a;
 
+    --color-mint: #2dd4bf;
+    --color-mint-dim: #5eead4;
+    --color-mint-tint: #103330;
+
+    --color-violet: #a78bfa;
+    --color-violet-dim: #c4b5fd;
+    --color-violet-tint: #241c3d;
+
+    --color-blossom: #f472b6;
+    --color-blossom-dim: #f9a8d4;
+    --color-blossom-tint: #341a29;
+
     /* Shadows read as near-invisible on dark backgrounds at light-mode
        opacity, so darken and tighten them rather than reuse the same
        values. */
@@ -83,6 +110,18 @@
 
   --color-rose: var(--color-rose);
   --color-rose-tint: var(--color-rose-tint);
+
+  --color-mint: var(--color-mint);
+  --color-mint-dim: var(--color-mint-dim);
+  --color-mint-tint: var(--color-mint-tint);
+
+  --color-violet: var(--color-violet);
+  --color-violet-dim: var(--color-violet-dim);
+  --color-violet-tint: var(--color-violet-tint);
+
+  --color-blossom: var(--color-blossom);
+  --color-blossom-dim: var(--color-blossom-dim);
+  --color-blossom-tint: var(--color-blossom-tint);
 
   --shadow-card: var(--shadow-card);
   --shadow-card-hover: var(--shadow-card-hover);
@@ -131,6 +170,10 @@ body {
   0%, 100% { transform: translate(0, 0) scale(1); }
   50% { transform: translate(-8px, 8px) scale(1.04); }
 }
+@keyframes hero-drift-c {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(4px, 10px) scale(1.08); }
+}
 @keyframes eq-pulse {
   0%, 100% { transform: scaleY(0.75); }
   50% { transform: scaleY(1.3); }
@@ -141,23 +184,41 @@ body {
 }
 .hero-blob-a { animation: hero-drift-a 7s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
 .hero-blob-b { animation: hero-drift-b 8s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+.hero-blob-c { animation: hero-drift-c 9s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
 .eq-bar { animation: eq-pulse 1.4s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
 .hero-dot { animation: dot-bob 4s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
 
-/* Scroll-reveal fade/rise, driven by Reveal.tsx toggling data-visible. */
+/* A soft breathing glow behind the primary CTA, so it keeps drawing the
+   eye even once the entrance animations have settled. */
+@keyframes cta-glow {
+  0%, 100% { box-shadow: 0 0 0 0 rgb(29 78 216 / 0.35); }
+  50% { box-shadow: 0 0 0 14px rgb(29 78 216 / 0); }
+}
+.cta-pulse { animation: cta-glow 2.6s ease-out infinite; }
+
+/* Gentle continuous float for small badges/chips, applied sparingly. */
+@keyframes chip-float {
+  0%, 100% { transform: translateY(0) rotate(-1deg); }
+  50% { transform: translateY(-4px) rotate(1deg); }
+}
+.chip-float { animation: chip-float 3.2s ease-in-out infinite; }
+
+/* Scroll-reveal: fade + rise + a slight playful overshoot scale, driven
+   by Reveal.tsx toggling data-visible. */
 [data-reveal] {
   opacity: 0;
-  transform: translateY(28px);
-  transition: opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1), transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+  transform: translateY(28px) scale(0.96);
+  transition: opacity 0.6s cubic-bezier(0.34, 1.56, 0.64, 1), transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 [data-reveal="true"] {
   opacity: 1;
-  transform: translateY(0);
+  transform: translateY(0) scale(1);
 }
 
 @media (prefers-reduced-motion: reduce) {
   .orb-glow, .orb-core,
-  .hero-blob-a, .hero-blob-b, .eq-bar, .hero-dot {
+  .hero-blob-a, .hero-blob-b, .hero-blob-c, .eq-bar, .hero-dot,
+  .cta-pulse, .chip-float {
     animation: none !important;
   }
   [data-reveal] {

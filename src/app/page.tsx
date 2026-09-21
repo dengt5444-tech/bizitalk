@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Sparkles } from "lucide-react";
 import { Avatar } from "@/components/Avatar";
 import { Reveal } from "@/components/Reveal";
 import { HeroIllustration } from "@/components/illustrations/HeroIllustration";
@@ -16,24 +16,32 @@ const FEATURES = [
     title: "相手が変われば、英語も変わる",
     description:
       "CEOへの報告、インドの同僚とのスタンドアップ、取引先との交渉——誰と話すかでキャラクター設定されたAIが変わり、その場に合った英語を練習できます。",
+    tint: "bg-signal-tint",
+    text: "text-signal",
   },
   {
     number: "02",
     title: "リアルタイム音声で、本物の会話のように",
     description:
       "対応ブラウザではAIとマイクごしに低遅延で会話。相手の話を遮ったり、間が空いたり——本物の会話に近い緊張感の中で練習できます。",
+    tint: "bg-mint-tint",
+    text: "text-mint-dim",
   },
   {
     number: "03",
     title: "会話後にAIコーチがフィードバック",
     description:
       "話し終えると、言い間違いの修正・良かった表現・使うと良い単語を分析。文法・語彙・丁寧さをスコアで可視化し、話すたびに弱点がはっきりします。",
+    tint: "bg-violet-tint",
+    text: "text-violet-dim",
   },
   {
     number: "04",
     title: "記録が残るから、成長が見える",
     description:
       "マイページでフルエンシースコアの推移や継続日数を確認。過去の会話とフィードバックはいつでも見返せて、苦手な表現は復習リストに残ります。",
+    tint: "bg-amber-tint",
+    text: "text-amber-dim",
   },
 ];
 
@@ -49,16 +57,19 @@ const WHY_ENGLISH = [
     title: "キャリアの選択肢が増える",
     description:
       "海外プロジェクトへの参加、グローバルチームでの評価、転職市場での見え方——英語で自分の意見を言えることは、任される仕事の範囲を直接広げます。",
+    dot: "bg-signal-dim",
   },
   {
     title: "任される仕事の幅が広がる",
     description:
       "会議で臆せず発言できる、メールだけでなく口頭でも交渉できる。それだけで「この人になら任せられる」と思われる機会が増えます。",
+    dot: "bg-mint",
   },
   {
     title: "今日の一言が、明日の自信になる",
     description:
       "言えなかった一言が言えるようになる。その積み重ねが、次のチャンスに手を挙げる自信につながります。",
+    dot: "bg-violet",
   },
 ];
 
@@ -72,8 +83,10 @@ export default function Home() {
         />
         <div className="mx-auto grid max-w-6xl items-center gap-10 px-6 pt-20 pb-16 sm:pt-28 sm:pb-20 lg:grid-cols-[1.1fr_1fr] lg:gap-16">
           <div className="text-center lg:text-left">
-            <span className="inline-flex items-center gap-2 text-xs font-medium tracking-[0.2em] text-signal uppercase">
-              <span className="h-px w-6 bg-signal" />
+            <span className="chip-float inline-flex items-center gap-2 rounded-full bg-signal-tint py-1.5 pr-4 pl-2.5 text-xs font-semibold text-signal-dim shadow-card">
+              <span className="flex h-4 w-4 items-center justify-center rounded-full bg-amber text-paper">
+                <Sparkles size={10} strokeWidth={2.5} />
+              </span>
               無料のシーンからお試しいただけます
             </span>
             <h1 className="mt-8 font-display text-5xl leading-[1.15] font-semibold text-ink sm:text-7xl sm:leading-[1.08]">
@@ -87,7 +100,7 @@ export default function Home() {
             <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row lg:justify-start">
               <Link
                 href="/conversation"
-                className="rounded-full bg-signal px-8 py-3.5 text-base font-medium text-paper shadow-card transition duration-300 hover:-translate-y-0.5 hover:scale-[1.03] hover:bg-signal-dim hover:shadow-card-hover active:scale-[0.98]"
+                className="cta-pulse rounded-full bg-signal px-8 py-3.5 text-base font-medium text-paper shadow-card transition duration-300 hover:-translate-y-0.5 hover:scale-[1.03] hover:bg-signal-dim hover:shadow-card-hover active:scale-[0.98]"
               >
                 AIと話してみる(無料)
               </Link>
@@ -117,7 +130,8 @@ export default function Home() {
             {WHY_ENGLISH.map((item, i) => (
               <Reveal key={item.title} delay={i * 100}>
                 <div className="h-full rounded-3xl bg-paper/[0.07] p-6 transition duration-300 hover:-translate-y-1 hover:bg-paper/[0.12]">
-                  <h3 className="font-display text-base font-semibold text-paper">
+                  <span className={`inline-block h-2.5 w-2.5 rounded-full ${item.dot}`} />
+                  <h3 className="mt-3 font-display text-base font-semibold text-paper">
                     {item.title}
                   </h3>
                   <p className="mt-2 text-sm leading-relaxed text-paper/70">
@@ -227,7 +241,7 @@ export default function Home() {
           {FEATURES.map((feature, i) => (
             <Reveal key={feature.title} delay={i * 80}>
               <div className="grid gap-3 py-8 sm:grid-cols-[4rem_1fr] sm:gap-8">
-                <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-signal-tint font-display text-base font-semibold text-signal">
+                <span className={`flex h-11 w-11 items-center justify-center rounded-2xl font-display text-base font-semibold transition duration-300 hover:scale-110 ${feature.tint} ${feature.text}`}>
                   {feature.number}
                 </span>
                 <div>

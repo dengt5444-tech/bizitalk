@@ -1,8 +1,10 @@
 const PALETTE = [
   { bg: "bg-signal-tint", text: "text-signal-dim" },
   { bg: "bg-amber-tint", text: "text-amber-dim" },
+  { bg: "bg-mint-tint", text: "text-mint-dim" },
+  { bg: "bg-violet-tint", text: "text-violet-dim" },
+  { bg: "bg-blossom-tint", text: "text-blossom-dim" },
   { bg: "bg-rose-tint", text: "text-rose" },
-  { bg: "bg-paper-dim", text: "text-ink" },
 ] as const;
 
 function hashString(value: string) {

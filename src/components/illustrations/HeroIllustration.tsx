@@ -27,11 +27,24 @@ export function HeroIllustration({ className = "" }: { className?: string }) {
           <stop offset="0%" stopColor="#f0ad5e" stopOpacity="0.9" />
           <stop offset="100%" stopColor="#b45309" stopOpacity="0.5" />
         </linearGradient>
+        <linearGradient id={`hero-c-${id}`} x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor="#a78bfa" stopOpacity="0.8" />
+          <stop offset="100%" stopColor="#7c3aed" stopOpacity="0.4" />
+        </linearGradient>
         <filter id={`hero-blur-${id}`} x="-50%" y="-50%" width="200%" height="200%">
           <feGaussianBlur stdDeviation="18" />
         </filter>
       </defs>
 
+      <ellipse
+        cx="250"
+        cy="90"
+        rx="90"
+        ry="80"
+        fill={`url(#hero-c-${id})`}
+        filter={`url(#hero-blur-${id})`}
+        className="hero-blob-c"
+      />
       <ellipse
         cx="150"
         cy="160"
@@ -61,7 +74,11 @@ export function HeroIllustration({ className = "" }: { className?: string }) {
             width="7"
             height={h}
             rx="3.5"
-            fill={i % 3 === 0 ? "var(--color-amber)" : "var(--color-signal)"}
+            fill={
+              ["var(--color-signal)", "var(--color-mint)", "var(--color-violet)", "var(--color-amber)"][
+                i % 4
+              ]
+            }
             className="eq-bar"
             style={{ animationDelay: `${i * 0.09}s` }}
           />

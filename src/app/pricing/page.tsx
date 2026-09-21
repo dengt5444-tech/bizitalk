@@ -59,9 +59,16 @@ type PlanCard = {
   // actually charged as a misleading dual-price display.
   futurePrice: string;
   price: string;
-  accent: "amber" | "signal";
+  accent: "amber" | "signal" | "mint" | "violet";
   features: string[];
 };
+
+const ACCENTS = {
+  amber: { text: "text-amber-dim", tint: "bg-amber-tint", tintText: "text-amber-dim" },
+  signal: { text: "text-signal", tint: "bg-signal-tint", tintText: "text-signal-dim" },
+  mint: { text: "text-mint-dim", tint: "bg-mint-tint", tintText: "text-mint-dim" },
+  violet: { text: "text-violet-dim", tint: "bg-violet-tint", tintText: "text-violet-dim" },
+} as const;
 
 export default async function PricingPage() {
   const user = await getCurrentUser();
@@ -77,7 +84,7 @@ export default async function PricingPage() {
       name: "リスニングプラン",
       futurePrice: "¥1,980",
       price: "¥490",
-      accent: "amber",
+      accent: "mint",
       features: [
         "全教材が聞き放題",
         "スクリプト・単語リスト付き",
@@ -105,7 +112,7 @@ export default async function PricingPage() {
       name: "スタンダードプラン",
       futurePrice: "¥9,800",
       price: "¥4,990",
-      accent: "signal",
+      accent: "violet",
       features: [
         `全26シーンでAI会話練習(月${CONVERSATION_MINUTES_PER_MONTH.standard}分まで)`,
         "リスニング教材は聞き放題",
@@ -120,7 +127,7 @@ export default async function PricingPage() {
       name: "AI英会話使い放題プラン",
       futurePrice: "¥19,800",
       price: "¥9,900",
-      accent: "signal",
+      accent: "amber",
       features: [
         "AI英会話が実質使い放題",
         "リスニング教材は聞き放題",
@@ -162,9 +169,7 @@ export default async function PricingPage() {
 
       <div className="mt-10 grid gap-6 sm:grid-cols-2">
         {plans.map((plan, i) => {
-          const accentText = plan.accent === "amber" ? "text-amber-dim" : "text-signal";
-          const accentTint = plan.accent === "amber" ? "bg-amber-tint" : "bg-signal-tint";
-          const accentTintText = plan.accent === "amber" ? "text-amber-dim" : "text-signal-dim";
+          const { text: accentText, tint: accentTint, tintText: accentTintText } = ACCENTS[plan.accent];
           const current = isCurrentPlan(plan.key);
 
           return (
