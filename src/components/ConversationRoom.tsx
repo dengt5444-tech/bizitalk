@@ -185,6 +185,14 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
     guidedModeRef.current = guidedMode;
   }, [guidedMode]);
 
+  // Mirrors `micMuted` for the same reason assistantSpeakingRef mirrors
+  // assistantSpeaking: dc.onmessage is a closure from when the connection
+  // was opened and never sees later state updates directly.
+  const micMutedRef = useRef(false);
+  useEffect(() => {
+    micMutedRef.current = micMuted;
+  }, [micMuted]);
+
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const voiceTranscriptRef = useRef<HTMLDivElement | null>(null);
   const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
@@ -415,6 +423,23 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
     setMicMuted(nextMuted);
   }
 
+  // The duration/echo checks on the transcript catch most noise and echo
+  // after the fact, but they can't catch everything — real room acoustics
+  // can clip or distort the AI's own voice enough that it no longer reads
+  // as an obvious fragment of what it just said, and it can easily last
+  // longer than the short-blip threshold. The reliable fix is to stop the
+  // mic from picking up the AI's voice in the first place: disable the mic
+  // track for the whole time the AI is actually speaking, and only
+  // re-enable it once the AI has finished — unless the learner has it
+  // manually muted (or it was force-muted at the turn limit), in which
+  // case it stays off regardless.
+  function syncMicEnabled() {
+    const stream = micStreamRef.current;
+    if (!stream) return;
+    const shouldBeEnabled = !micMutedRef.current && !assistantSpeakingRef.current;
+    stream.getTracks().forEach((track) => (track.enabled = shouldBeEnabled));
+  }
+
   function playAudio(index: number) {
     if (!sessionId || !audioRef.current) return;
     audioRef.current.srcObject = null;
@@ -509,11 +534,16 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
         case "response.audio_transcript.delta":
           assistantSpeakingRef.current = true;
           setAssistantSpeaking(true);
+          // Mic goes silent for as long as the AI is actually talking —
+          // see syncMicEnabled for why this is the real fix for the AI
+          // hearing (and reacting to) its own voice.
+          syncMicEnabled();
           break;
         case "response.output_audio_transcript.done":
         case "response.audio_transcript.done":
           assistantSpeakingRef.current = false;
           setAssistantSpeaking(false);
+          syncMicEnabled();
           if (typeof msg.transcript === "string") {
             appendRealtimeTurn("assistant", msg.transcript.trim(), msg.item_id);
           }
