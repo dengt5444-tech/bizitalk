@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import { getCurrentUser, isListeningEntitled } from "@/lib/entitlements";
 import {
   EXCLUDED_MATERIAL_SLUGS,
   LEVEL_LABELS,
@@ -15,15 +14,10 @@ export const dynamic = "force-dynamic";
 
 export default async function MaterialsPage() {
   const supabase = await createClient();
-  const [{ data: materials }, user] = await Promise.all([
-    supabase
-      .from("gakuto_materials")
-      .select("id, slug, title, description, is_free, order_index, level")
-      .order("order_index", { ascending: true }),
-    getCurrentUser(),
-  ]);
-
-  const subscribed = await isListeningEntitled(user);
+  const { data: materials } = await supabase
+    .from("gakuto_materials")
+    .select("id, slug, title, description, order_index, level")
+    .order("order_index", { ascending: true });
 
   const groups = new Map<
     MaterialLevel,
@@ -49,7 +43,7 @@ export default async function MaterialsPage() {
         リスニング教材一覧
       </h1>
       <p className="mt-3 max-w-xl text-ink-soft">
-        無料お試しの教材から、超上級のビジネス英語まで。ログインの上、リスニングプランへの登録でレベルを問わず全教材が聞き放題になります。
+        初級から超上級のビジネス英語まで、全教材いつでも無料で聞き放題です。
       </p>
 
       <div className="mt-12 space-y-14">
@@ -68,7 +62,6 @@ export default async function MaterialsPage() {
 
               <ul className="grid gap-4 sm:grid-cols-2">
                 {items.map((material) => {
-                  const unlocked = material.is_free || subscribed;
                   const scene = MATERIAL_SCENES[material.slug] ?? "report";
                   return (
                     <li key={material.id}>
@@ -81,15 +74,6 @@ export default async function MaterialsPage() {
                             scene={scene}
                             className="transition duration-300 group-hover:scale-105"
                           />
-                          {material.is_free ? (
-                            <span className="absolute top-3 right-3 rounded-full bg-amber-tint px-2.5 py-1 text-xs font-semibold text-amber-dim">
-                              無料
-                            </span>
-                          ) : !unlocked ? (
-                            <span className="absolute top-3 right-3 rounded-full bg-paper/90 px-2.5 py-1 text-xs font-medium text-ink-faint">
-                              ロック中
-                            </span>
-                          ) : null}
                         </div>
                         <div className="flex flex-1 flex-col justify-between p-5">
                           <div>
@@ -101,7 +85,7 @@ export default async function MaterialsPage() {
                             </p>
                           </div>
                           <p className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-signal">
-                            {unlocked ? "再生する" : "詳細を見る"}
+                            再生する
                             <ArrowRight size={16} strokeWidth={2} />
                           </p>
                         </div>

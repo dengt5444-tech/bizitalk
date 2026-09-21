@@ -1,11 +1,7 @@
 import { Suspense } from "react";
 import { Check, Plus } from "lucide-react";
 import { Reveal } from "@/components/Reveal";
-import {
-  getConversationPlan,
-  getCurrentUser,
-  isListeningEntitled,
-} from "@/lib/entitlements";
+import { getConversationPlan, getCurrentUser } from "@/lib/entitlements";
 import { CheckoutButton } from "@/components/CheckoutButton";
 import { ManageSubscriptionButton } from "@/components/ManageSubscriptionButton";
 import { ReferralCodeField } from "@/components/ReferralCodeField";
@@ -27,7 +23,7 @@ const FAQ: { question: string; answer: string }[] = [
   {
     question: "無料でどこまで試せますか?",
     answer:
-      "AI会話・リスニング教材とも、それぞれ無料のシーン・教材を1つずつご用意しています(利用にはログインが必要です)。AI会話の無料利用は月5分までとなります。それ以外は各プランへの登録が必要です。",
+      "リスニング教材と単語帳は、登録なしで全て無料でご利用いただけます。AI英会話は無料のシーンを1つご用意しており、月5分まで無料でお試しいただけます。それ以上お話しになりたい場合は、AI英会話プランへのご登録が必要です。",
   },
   {
     question: "AI英会話の時間に上限があるのはなぜですか?",
@@ -35,9 +31,9 @@ const FAQ: { question: string; answer: string }[] = [
       "AI英会話はリアルタイムの音声AIを利用しており、話した時間に応じて実際のAPI利用コストが発生します。安定してサービスを提供し続けるため、プランごとに月あたりの利用可能時間(分)を設けています。使い放題プランも、ごく一部の極端な利用を除き実質的に使い放題となる、十分に余裕を持った時間を設定しています。",
   },
   {
-    question: "リスニング教材はどのプランでも使えますか?",
+    question: "リスニング教材や単語帳にお金はかかりますか?",
     answer:
-      "リスニングプランのほか、お試し・スタンダード・使い放題プランのいずれかにご登録いただいても、リスニング教材は聞き放題でご利用いただけます。",
+      "いいえ、リスニング教材と単語帳はどなたでも無料でご利用いただけます。プランへのご登録が必要なのはAI英会話のみです。",
   },
   {
     question: "「先行提供価格」とはなんですか?",
@@ -47,7 +43,7 @@ const FAQ: { question: string; answer: string }[] = [
 ];
 
 type PlanCard = {
-  key: "listening" | "trial" | "standard" | "unlimited";
+  key: "trial" | "standard" | "unlimited";
   badge: string;
   name: string;
   // The price this plan is genuinely planned to move to later, once the
@@ -59,39 +55,21 @@ type PlanCard = {
   // actually charged as a misleading dual-price display.
   futurePrice: string;
   price: string;
-  accent: "amber" | "signal" | "mint" | "violet";
+  accent: "amber" | "signal" | "violet";
   features: string[];
 };
 
 const ACCENTS = {
   amber: { text: "text-amber-dim", tint: "bg-amber-tint", tintText: "text-amber-dim" },
   signal: { text: "text-signal", tint: "bg-signal-tint", tintText: "text-signal-dim" },
-  mint: { text: "text-mint-dim", tint: "bg-mint-tint", tintText: "text-mint-dim" },
   violet: { text: "text-violet-dim", tint: "bg-violet-tint", tintText: "text-violet-dim" },
 } as const;
 
 export default async function PricingPage() {
   const user = await getCurrentUser();
-  const [conversationPlan, listeningSubscribed] = await Promise.all([
-    getConversationPlan(user),
-    isListeningEntitled(user),
-  ]);
+  const conversationPlan = await getConversationPlan(user);
 
   const plans: PlanCard[] = [
-    {
-      key: "listening",
-      badge: "先行提供価格",
-      name: "リスニングプラン",
-      futurePrice: "¥1,980",
-      price: "¥490",
-      accent: "mint",
-      features: [
-        "全教材が聞き放題",
-        "スクリプト・単語リスト付き",
-        "理解度テストと単語復習リスト",
-        "いつでも解約可能",
-      ],
-    },
     {
       key: "trial",
       badge: "先行提供価格",
@@ -101,7 +79,6 @@ export default async function PricingPage() {
       accent: "signal",
       features: [
         `AI英会話を月${CONVERSATION_MINUTES_PER_MONTH.trial}分まで練習`,
-        "リスニング教材は聞き放題",
         "会話ごとのAIコーチによるフィードバック",
         "いつでも解約可能",
       ],
@@ -115,7 +92,6 @@ export default async function PricingPage() {
       accent: "violet",
       features: [
         `全26シーンでAI会話練習(月${CONVERSATION_MINUTES_PER_MONTH.standard}分まで)`,
-        "リスニング教材は聞き放題",
         "リアルタイム音声・AIコーチのフィードバック",
         "マイページでの進捗トラッキング",
         "いつでも解約可能",
@@ -130,22 +106,12 @@ export default async function PricingPage() {
       accent: "amber",
       features: [
         "AI英会話が実質使い放題",
-        "リスニング教材は聞き放題",
         "リアルタイム音声・AIコーチのフィードバック",
         "マイページでの進捗トラッキング",
         "いつでも解約可能",
       ],
     },
   ];
-
-  const isCurrentPlan = (key: PlanCard["key"]) => {
-    if (key === "listening") {
-      // Bundled into every AI tier too, but "current plan" here means the
-      // standalone listening purchase specifically.
-      return listeningSubscribed && conversationPlan === null;
-    }
-    return conversationPlan === key;
-  };
 
   return (
     <main className="mx-auto max-w-5xl px-6 py-14 sm:py-20">
@@ -157,7 +123,7 @@ export default async function PricingPage() {
           料金プラン
         </h1>
         <p className="mx-auto mt-3 max-w-xl text-ink-soft">
-          話す練習(AI英会話)と聞く練習(リスニング)、それぞれのペースに合わせて選べる4つのプランをご用意しています。
+          リスニング教材と単語帳はすべて無料。もっと話す練習がしたくなったら、AI英会話プランをご検討ください。
         </p>
       </div>
 
@@ -167,10 +133,10 @@ export default async function PricingPage() {
         </Suspense>
       )}
 
-      <div className="mt-10 grid gap-6 sm:grid-cols-2">
+      <div className="mt-10 grid gap-6 sm:grid-cols-3">
         {plans.map((plan, i) => {
           const { text: accentText, tint: accentTint, tintText: accentTintText } = ACCENTS[plan.accent];
-          const current = isCurrentPlan(plan.key);
+          const current = conversationPlan === plan.key;
 
           return (
             <Reveal key={plan.key} delay={i * 80} className="h-full">
@@ -210,9 +176,7 @@ export default async function PricingPage() {
                     <p className={`rounded-full ${accentTint} px-4 py-3 text-sm font-semibold ${accentTintText}`}>
                       現在ご登録中です
                     </p>
-                    <ManageSubscriptionButton
-                      plan={plan.key === "listening" ? "listening" : "conversation"}
-                    />
+                    <ManageSubscriptionButton plan="conversation" />
                   </div>
                 ) : (
                   <CheckoutButton isLoggedIn={!!user} plan={plan.key} />

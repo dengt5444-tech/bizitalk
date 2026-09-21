@@ -2,7 +2,7 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { getCurrentUser, isListeningEntitled } from "@/lib/entitlements";
+import { getCurrentUser } from "@/lib/entitlements";
 import { AudioPlayer } from "@/components/AudioPlayer";
 import { Quiz } from "@/components/Quiz";
 import { VocabList } from "@/components/VocabList";
@@ -33,7 +33,7 @@ export default async function MaterialPage({
   const { data: material } = await supabase
     .from("gakuto_materials")
     .select(
-      "id, slug, title, description, script, is_free, vocab, quiz, dialogue, level",
+      "id, slug, title, description, script, vocab, quiz, dialogue, level",
     )
     .eq("slug", slug)
     .maybeSingle();
@@ -43,8 +43,6 @@ export default async function MaterialPage({
   }
 
   const user = await getCurrentUser();
-  const subscribed = await isListeningEntitled(user);
-  const unlocked = material.is_free || subscribed;
   const vocab = (material.vocab ?? []) as VocabItem[];
   const quiz = (material.quiz ?? []) as QuizQuestion[];
   const dialogue = (material.dialogue ?? []) as DialogueLine[];
@@ -70,11 +68,6 @@ export default async function MaterialPage({
         <span className="inline-block rounded-full bg-signal-tint px-3 py-1 text-xs font-semibold text-signal-dim">
           {LEVEL_LABELS[(material.level as MaterialLevel) ?? "beginner"]}
         </span>
-        {material.is_free && (
-          <span className="inline-block rounded-full bg-amber-tint px-3 py-1 text-xs font-semibold text-amber-dim">
-            無料お試し
-          </span>
-        )}
       </div>
       <div className="mt-3">
         <h1 className="font-display text-3xl font-semibold text-ink">
@@ -84,68 +77,37 @@ export default async function MaterialPage({
       </div>
 
       <div className="mt-8 space-y-6">
-        {unlocked ? (
-          <>
-            <div className="rounded-3xl bg-surface p-6 shadow-card">
-              <AudioPlayer materialId={material.id} />
-              <details className="mt-5 text-sm">
-                <summary className="cursor-pointer font-semibold text-signal">
-                  スクリプトを表示
-                </summary>
-                <div className="mt-3">
-                  {dialogue.length > 0 ? (
-                    <DialogueTranscript dialogue={dialogue} />
-                  ) : (
-                    <p className="leading-relaxed text-ink-soft whitespace-pre-wrap">
-                      {material.script}
-                    </p>
-                  )}
-                </div>
-              </details>
-            </div>
-
-            <VocabList
-              materialId={material.id}
-              materialTitle={material.title}
-              vocab={vocab}
-              isLoggedIn={!!user}
-            />
-
-            <Quiz
-              materialId={material.id}
-              materialTitle={material.title}
-              questions={quiz}
-              isLoggedIn={!!user}
-            />
-          </>
-        ) : (
-          <div className="rounded-3xl bg-paper-dim p-8 text-center shadow-card">
-            <p className="font-display font-semibold text-ink">
-              この教材はロックされています
-            </p>
-            <p className="mt-2 text-sm text-ink-soft">
-              {user
-                ? "リスニングプランへの登録で全教材が再生できます。"
-                : "ログインの上、リスニングプランへの登録が必要です。"}
-            </p>
-            <div className="mt-6 flex justify-center gap-3">
-              {!user && (
-                <Link
-                  href="/login"
-                  className="rounded-full border border-line px-5 py-2.5 text-sm font-medium text-ink transition hover:border-ink-faint"
-                >
-                  ログイン
-                </Link>
+        <div className="rounded-3xl bg-surface p-6 shadow-card">
+          <AudioPlayer materialId={material.id} />
+          <details className="mt-5 text-sm">
+            <summary className="cursor-pointer font-semibold text-signal">
+              スクリプトを表示
+            </summary>
+            <div className="mt-3">
+              {dialogue.length > 0 ? (
+                <DialogueTranscript dialogue={dialogue} />
+              ) : (
+                <p className="leading-relaxed text-ink-soft whitespace-pre-wrap">
+                  {material.script}
+                </p>
               )}
-              <Link
-                href="/pricing"
-                className="rounded-full bg-signal px-5 py-2.5 text-sm font-medium text-paper transition hover:bg-signal-dim"
-              >
-                料金プランを見る
-              </Link>
             </div>
-          </div>
-        )}
+          </details>
+        </div>
+
+        <VocabList
+          materialId={material.id}
+          materialTitle={material.title}
+          vocab={vocab}
+          isLoggedIn={!!user}
+        />
+
+        <Quiz
+          materialId={material.id}
+          materialTitle={material.title}
+          questions={quiz}
+          isLoggedIn={!!user}
+        />
       </div>
     </main>
   );

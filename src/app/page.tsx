@@ -211,7 +211,7 @@ export default function Home() {
                 話す前に、まず聞く力も鍛えたい方へ
               </h2>
               <p className="mt-2 max-w-xl text-sm leading-relaxed text-ink-soft">
-                スクリプト・単語・理解度テスト付きのビジネスリスニング教材もご用意しています。話す練習(AI会話)と聞く練習(リスニング)、それぞれのプランでご利用いただけます。
+                スクリプト・単語・理解度テスト付きのビジネスリスニング教材を、すべて無料でご用意しています。
               </p>
             </div>
             <Link
