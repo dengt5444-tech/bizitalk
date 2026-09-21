@@ -88,7 +88,12 @@ export async function POST(
               // silence, which was turning into fake conversation turns
               // the AI would then reply to.
               transcription: { model: "gpt-4o-mini-transcribe" },
-              turn_detection: { type: "semantic_vad" },
+              // "low" eagerness makes the model more patient about deciding
+              // the learner has actually started/finished talking, instead
+              // of reacting to every brief noise blip or mic echo of its
+              // own voice — which is what made the conversation look like
+              // it was progressing on its own without the learner speaking.
+              turn_detection: { type: "semantic_vad", eagerness: "low" },
             },
           },
         },

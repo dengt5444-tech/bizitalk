@@ -32,7 +32,33 @@ type Hint = { reply: string; gloss: string };
 
 // A flagged speech segment shorter than this is treated as noise, not a
 // real (if brief) reply — see the speech_started/stopped handling below.
-const MIN_SPEECH_DURATION_MS = 350;
+const MIN_SPEECH_DURATION_MS = 450;
+
+// Without headphones, the AI's own voice playing through the speakers can
+// leak back into the mic even with echoCancellation on, get transcribed,
+// and look exactly like the learner said it — which then makes the AI
+// reply to itself and the conversation appears to run on its own. A
+// transcript that's essentially a fragment of what the AI just said is
+// almost certainly this echo, not real speech, so it's filtered out below
+// rather than trusted as a genuine user turn.
+function normalizeForEchoCheck(text: string) {
+  return text
+    .toLowerCase()
+    .replace(/[.,!?;:"'’‘“”\-–—()]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function looksLikeSelfEcho(candidate: string, lastAssistantText: string) {
+  const a = normalizeForEchoCheck(candidate);
+  const b = normalizeForEchoCheck(lastAssistantText);
+  if (!a || !b) return false;
+  if (b.includes(a)) return true;
+  const aWords = a.split(" ");
+  const bWords = new Set(b.split(" "));
+  const overlap = aWords.filter((w) => bWords.has(w)).length;
+  return aWords.length >= 3 && overlap / aWords.length >= 0.75;
+}
 
 interface SpeechRecognitionAlternative {
   transcript: string;
@@ -464,18 +490,27 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
             appendRealtimeTurn("assistant", msg.transcript.trim(), msg.item_id);
           }
           break;
-        case "conversation.item.input_audio_transcription.completed":
+        case "conversation.item.input_audio_transcription.completed": {
           // A very short flagged "speech" segment is much more likely to be
           // a noise blip that the transcription model hallucinated text for
           // than a real word — discard it instead of letting it silently
           // turn into a fake conversation turn the AI then replies to.
           if (
-            typeof msg.transcript === "string" &&
-            lastSpeechDurationMsRef.current >= MIN_SPEECH_DURATION_MS
+            typeof msg.transcript !== "string" ||
+            lastSpeechDurationMsRef.current < MIN_SPEECH_DURATION_MS
           ) {
-            appendRealtimeTurn("user", msg.transcript.trim(), msg.item_id);
+            break;
           }
+          const candidate = msg.transcript.trim();
+          const lastAssistantTurn = [...transcriptRef.current]
+            .reverse()
+            .find((turn) => turn.role === "assistant");
+          if (lastAssistantTurn && looksLikeSelfEcho(candidate, lastAssistantTurn.text)) {
+            break;
+          }
+          appendRealtimeTurn("user", candidate, msg.item_id);
           break;
+        }
         case "conversation.item.done":
           // Fallback in case the dedicated transcript-done event above
           // isn't recognized; item ids keep this from double-adding.
