@@ -32,15 +32,20 @@ export function Quiz({
     setSubmitted(true);
     if (!isLoggedIn) return;
 
-    const missed = questions.filter((q, i) => answers[i] !== q.answerIndex && q.word);
+    // Not every quiz question is tagged with a specific vocab word (some are
+    // plain comprehension questions) — those still get saved for review,
+    // just keyed by the question itself with the correct choice as the
+    // "meaning", so every wrong answer ends up reviewable, not only the
+    // word-tagged ones.
+    const missed = questions.filter((q, i) => answers[i] !== q.answerIndex);
     try {
       await Promise.all(
         missed.map((q) =>
           api.post("/api/review/listening-words", {
             materialId,
             materialTitle,
-            word: q.word,
-            meaning: q.wordMeaning ?? "",
+            word: q.word ?? q.question,
+            meaning: q.word ? (q.wordMeaning ?? "") : q.choices[q.answerIndex],
           }),
         ),
       );

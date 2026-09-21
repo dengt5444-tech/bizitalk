@@ -21,6 +21,21 @@ export interface HarborColors {
 
   rose: string;
   roseTint: string;
+
+  // M3-style secondary/tertiary tonal accents — used alongside signal blue
+  // to give scenario categories, feature chips and pricing plans their own
+  // identity, instead of one blue repeated everywhere.
+  mint: string;
+  mintDim: string;
+  mintTint: string;
+
+  violet: string;
+  violetDim: string;
+  violetTint: string;
+
+  blossom: string;
+  blossomDim: string;
+  blossomTint: string;
 }
 
 export const lightColors: HarborColors = {
@@ -43,6 +58,18 @@ export const lightColors: HarborColors = {
 
   rose: "#b91c1c",
   roseTint: "#fbe9e9",
+
+  mint: "#0d9488",
+  mintDim: "#0f766e",
+  mintTint: "#e3f6f2",
+
+  violet: "#7c3aed",
+  violetDim: "#6025c0",
+  violetTint: "#f1ecfd",
+
+  blossom: "#db2777",
+  blossomDim: "#a3175a",
+  blossomTint: "#fce7f3",
 };
 
 export const darkColors: HarborColors = {
@@ -65,4 +92,16 @@ export const darkColors: HarborColors = {
 
   rose: "#e08a8a",
   roseTint: "#2b1a1a",
+
+  mint: "#2dd4bf",
+  mintDim: "#5eead4",
+  mintTint: "#103330",
+
+  violet: "#a78bfa",
+  violetDim: "#c4b5fd",
+  violetTint: "#241c3d",
+
+  blossom: "#f472b6",
+  blossomDim: "#f9a8d4",
+  blossomTint: "#341a29",
 };

@@ -14,7 +14,7 @@ import { ScreenScroll } from "@/components/ui/ScreenContainer";
 import { SkeletonList } from "@/components/ui/Skeleton";
 import { Heading, Text } from "@/components/ui/Text";
 import { useAuth } from "@/context/AuthProvider";
-import { getConversationPlan, isListeningEntitled } from "@/lib/entitlements";
+import { getConversationPlan } from "@/lib/entitlements";
 import { loadDashboard, type DashboardData } from "@/lib/queries/dashboard";
 import { useTheme } from "@/theme/ThemeProvider";
 
@@ -26,14 +26,10 @@ export default function MyPageScreen() {
   const [dashboard, setDashboard] = useState<DashboardData | null>(null);
   const [dashboardError, setDashboardError] = useState(false);
   const [conversationPlan, setConversationPlan] = useState<Awaited<ReturnType<typeof getConversationPlan>>>(null);
-  const [listeningSubscribed, setListeningSubscribed] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
   const reloadEntitlements = useCallback(() => {
-    return Promise.all([
-      getConversationPlan(user?.id).then(setConversationPlan).catch(() => {}),
-      isListeningEntitled(user?.id).then(setListeningSubscribed).catch(() => {}),
-    ]);
+    return getConversationPlan(user?.id).then(setConversationPlan).catch(() => {});
   }, [user]);
 
   const reloadDashboard = useCallback(() => {
@@ -105,14 +101,15 @@ export default function MyPageScreen() {
       {user && dashboard && (
         <>
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 12 }}>
-            <StatTile label="継続日数" value={`${dashboard.streak}`} unit="日" />
-            <StatTile label="今週の会話" value={`${dashboard.thisWeekCount}`} unit="回" />
+            <StatTile label="継続日数" value={`${dashboard.streak}`} unit="日" accent="signal" />
+            <StatTile label="今週の会話" value={`${dashboard.thisWeekCount}`} unit="回" accent="mint" />
             <StatTile
               label="平均フルエンシー"
               value={dashboard.avgFluency !== null ? `${dashboard.avgFluency}` : "-"}
               unit="/5"
+              accent="violet"
             />
-            <StatTile label="保存した単語" value={`${dashboard.savedWordCount}`} unit="語" />
+            <StatTile label="保存した単語" value={`${dashboard.savedWordCount}`} unit="語" accent="amber" />
           </View>
 
           {dashboard.trend.length >= 2 && (
@@ -239,7 +236,6 @@ export default function MyPageScreen() {
         <PricingPlans
           isLoggedIn={!!user}
           conversationPlan={conversationPlan}
-          listeningSubscribed={listeningSubscribed}
           onCheckoutReturn={reloadEntitlements}
         />
       </View>

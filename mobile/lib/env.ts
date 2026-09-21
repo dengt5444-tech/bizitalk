@@ -24,8 +24,8 @@ export const API_BASE_URL = required(
 // Stripe.js integrations) — only used here to tell which AI conversation
 // tier a subscription's price_id corresponds to, for "current plan"
 // highlighting on the pricing screen. Optional: if unset, that
-// highlighting just can't tell tiers apart (isListeningEntitled/
-// hasActiveConversationSubscription still work for unlock checks).
+// highlighting just can't tell tiers apart (hasActiveConversationSubscription
+// still works for unlock checks).
 export const STRIPE_PRICE_ID_TRIAL = process.env.EXPO_PUBLIC_STRIPE_PRICE_ID_TRIAL;
 export const STRIPE_PRICE_ID_STANDARD = process.env.EXPO_PUBLIC_STRIPE_PRICE_ID;
 export const STRIPE_PRICE_ID_UNLIMITED = process.env.EXPO_PUBLIC_STRIPE_PRICE_ID_UNLIMITED;

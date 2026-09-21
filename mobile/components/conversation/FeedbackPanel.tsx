@@ -1,3 +1,4 @@
+import { ArrowRight } from "lucide-react-native";
 import React, { useState } from "react";
 import { View } from "react-native";
 import { Button } from "@/components/ui/Button";
@@ -104,9 +105,12 @@ export function FeedbackPanel({
                 <Text size={13} color="rose" style={{ textDecorationLine: "line-through" }}>
                   {c.original}
                 </Text>
-                <Text size={13} weight="medium" color="signalDim">
-                  → {c.corrected}
-                </Text>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                  <ArrowRight size={13} color={theme.colors.signalDim} strokeWidth={2} />
+                  <Text size={13} weight="medium" color="signalDim">
+                    {c.corrected}
+                  </Text>
+                </View>
                 <Text size={12} color="inkSoft">
                   {c.explanation}
                 </Text>

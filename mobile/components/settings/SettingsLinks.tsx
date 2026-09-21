@@ -31,7 +31,7 @@ export function SettingsLinks() {
   const version = Constants.expoConfig?.version ?? "1.0.0";
 
   return (
-    <View style={{ borderRadius: theme.radius.md, borderWidth: 1, borderColor: theme.colors.line, backgroundColor: theme.colors.surface, paddingHorizontal: 16 }}>
+    <View style={[{ borderRadius: theme.radius.lg, backgroundColor: theme.colors.surface, paddingHorizontal: 16 }, theme.shadows.card]}>
       <Row label="お問い合わせ" onPress={() => Linking.openURL(`mailto:${SUPPORT_EMAIL}`)} />
       <View style={{ height: 1, backgroundColor: theme.colors.lineSoft }} />
       <Row label="利用規約" onPress={() => router.push("/terms")} />

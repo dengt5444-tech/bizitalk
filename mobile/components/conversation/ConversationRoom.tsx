@@ -11,9 +11,9 @@ import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { Text } from "@/components/ui/Text";
 import { api, authedAudioSource } from "@/lib/api";
-import { CUSTOM_TOPIC_MAX_LENGTH, FREE_TALK_SLUG, MAX_TURNS_PER_SESSION } from "@/lib/conversation";
+import { CUSTOM_TOPIC_MAX_LENGTH, FREE_TALK_SLUG, MAX_TURNS_PER_SESSION, SUGGESTED_FEEDBACK_TURN } from "@/lib/conversation";
 import type { ConversationFeedback, ConversationTurn } from "@/lib/conversation";
-import { connectRealtimeVoice, isRealtimeVoiceSupported, type RealtimeController } from "@/lib/webrtc";
+import { connectRealtimeVoice, isRealtimeVoiceSupported, startMicStream, type RealtimeController } from "@/lib/webrtc";
 import { useTheme } from "@/theme/ThemeProvider";
 import { ChatBubble } from "./ChatBubble";
 import { FeedbackPanel } from "./FeedbackPanel";
@@ -63,6 +63,13 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
   const [hint, setHint] = useState<Hint | null>(null);
   const [hintLoading, setHintLoading] = useState(false);
 
+  // Bumped on every fetchHint call (and whenever the hint is cleared), so a
+  // slow response that resolves after the learner already replied — or
+  // after a newer hint request superseded it — can tell it's stale and
+  // discard itself instead of popping up a suggestion for a turn that has
+  // already passed.
+  const hintRequestIdRef = useRef(0);
+
   const playerRef = useRef<AudioPlayer | null>(null);
   const realtimeRef = useRef<RealtimeController | null>(null);
   // Tracks connectRealtimeVoice() while it's still negotiating, i.e. before
@@ -82,6 +89,7 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
   }, [guidedMode]);
 
   const turnLimitReached = turnCount >= MAX_TURNS_PER_SESSION;
+  const feedbackSuggested = turnCount >= SUGGESTED_FEEDBACK_TURN;
 
   useEffect(() => {
     return () => {
@@ -137,19 +145,43 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
     });
   }
 
+  // Fetches a hint unconditionally — callers decide whether guided mode's
+  // "auto-show after every turn" setting applies (see autoFetchHint below);
+  // a learner tapping the on-demand hint button should always get one
+  // regardless of that setting.
   async function fetchHint(transcript: ConversationTurn[]) {
     const id = sessionIdRef.current;
-    if (!id || !guidedModeRef.current) return;
+    if (!id) return;
+    const requestId = ++hintRequestIdRef.current;
     setHintLoading(true);
     try {
       const data = await api.post<Hint>(`/api/conversation/sessions/${id}/hint`, { transcript });
+      // The learner may have already spoken again (or guided mode may have
+      // been turned off) by the time this resolves — a newer request or an
+      // explicit clear bumps the id, so an outdated response like this one
+      // is dropped instead of popping up a suggestion for a turn that's
+      // already over.
+      if (requestId !== hintRequestIdRef.current) return;
       setHint(data);
     } catch {
       // Silent — the hint card just stays empty/previous; guided mode is a
       // convenience, not something worth interrupting the conversation for.
     } finally {
-      setHintLoading(false);
+      if (requestId === hintRequestIdRef.current) setHintLoading(false);
     }
+  }
+
+  // Used after each AI turn — only actually fetches when guided mode's
+  // "show automatically" setting is on. The on-demand hint button calls
+  // fetchHint directly instead, bypassing this gate.
+  function autoFetchHint(transcript: ConversationTurn[]) {
+    if (guidedModeRef.current) fetchHint(transcript);
+  }
+
+  function clearHint() {
+    hintRequestIdRef.current += 1;
+    setHint(null);
+    setHintLoading(false);
   }
 
   function appendRealtimeTurn(role: "user" | "assistant", text: string, itemId?: string) {
@@ -179,9 +211,9 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
     }
 
     if (role === "user") {
-      setHint(null);
+      clearHint();
     } else {
-      fetchHint(next);
+      autoFetchHint(next);
     }
   }
 
@@ -202,9 +234,18 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
     setStarting(true);
     setError(null);
     setMode(chosenMode);
-    setHint(null);
+    clearHint();
     openingHandledRef.current = false;
     processedIdsRef.current = new Set();
+
+    // Requested immediately — in parallel with creating the session below —
+    // rather than only after the session exists, since mic permission/
+    // device init is often the single slowest step in starting a voice
+    // call. A no-op .catch() here only silences the "unhandled rejection"
+    // warning that a denied/failed permission would otherwise log before
+    // connectRealtimeVoice gets a chance to await (and properly handle) it.
+    const micStreamPromise = chosenMode === "realtime" ? startMicStream() : null;
+    micStreamPromise?.catch(() => {});
 
     try {
       const data = await api.post<{ sessionId: string; transcript: ConversationTurn[] }>(
@@ -216,15 +257,15 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
       transcriptRef.current = data.transcript;
       setMessages(data.transcript);
       setTurnCount(0);
-      fetchHint(data.transcript);
+      autoFetchHint(data.transcript);
 
       if (chosenMode === "realtime") {
         setPhase("connecting");
         try {
-          const tokenData = await api.post<{ clientSecret: string }>(
-            `/api/conversation/sessions/${data.sessionId}/realtime-token`,
-          );
-          const connectPromise = connectRealtimeVoice(tokenData.clientSecret, scenario.openingLine, {
+          const clientSecretPromise = api
+            .post<{ clientSecret: string }>(`/api/conversation/sessions/${data.sessionId}/realtime-token`)
+            .then((d) => d.clientSecret);
+          const connectPromise = connectRealtimeVoice(clientSecretPromise, scenario.openingLine, micStreamPromise!, {
             onUserSpeakingChange: setUserSpeaking,
             onAssistantSpeakingChange: setAssistantSpeaking,
             onAssistantTurn: (text, itemId) => appendRealtimeTurn("assistant", text, itemId),
@@ -254,11 +295,11 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
           setMode("text");
           setError("リアルタイム音声に接続できなかったため、テキストモードで開始します。");
           setPhase("chatting");
-          if (autoPlay) setTimeout(() => playAudio(0), 150);
+          if (autoPlay) playAudio(0);
         }
       } else {
         setPhase("chatting");
-        if (autoPlay) setTimeout(() => playAudio(0), 150);
+        if (autoPlay) playAudio(0);
       }
     } catch (err) {
       const code = err instanceof Error ? err.message : "";
@@ -279,7 +320,7 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
 
     setInputText("");
     setError(null);
-    setHint(null);
+    clearHint();
 
     if (mode === "realtime" && realtimeRef.current) {
       pushTurn({ role: "user", text });
@@ -305,8 +346,8 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
       transcriptRef.current = withReply;
       setMessages(withReply);
       setTurnCount(data.turnCount);
-      fetchHint(withReply);
-      if (autoPlay) setTimeout(() => playAudio(data.assistantIndex), 150);
+      autoFetchHint(withReply);
+      if (autoPlay) playAudio(data.assistantIndex);
     } catch {
       setError("メッセージを送信できませんでした。もう一度お試しください。");
     } finally {
@@ -358,7 +399,7 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
     setError(null);
     setCustomTopic("");
     setMicMuted(false);
-    setHint(null);
+    clearHint();
   }
 
   if (phase === "idle") {
@@ -404,15 +445,15 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
         >
           <Lightbulb size={16} color={guidedMode ? theme.colors.signal : theme.colors.inkFaint} strokeWidth={2} />
           <Text size={13} weight="medium" color={guidedMode ? "signal" : "inkSoft"}>
-            ガイド付きで練習する
+            毎回ヒントを自動表示する
           </Text>
           {guidedMode && <Check size={15} color={theme.colors.signal} strokeWidth={2.5} />}
         </Pressable>
-        {guidedMode && (
-          <Text size={11} color="inkFaint" style={{ textAlign: "center", marginTop: -6 }}>
-            相手が話すたびに「こう言ってみましょう」という返答例が表示されます。
-          </Text>
-        )}
+        <Text size={11} color="inkFaint" style={{ textAlign: "center", marginTop: -6 }}>
+          {guidedMode
+            ? "相手が話すたびに「こう言ってみましょう」という返答例が表示されます。"
+            : "オフでも、会話中いつでもヒントボタンから返答例を呼び出せます。"}
+        </Text>
 
         <View style={{ gap: 10, alignSelf: "stretch" }}>
           {supportsRealtime && (
@@ -524,7 +565,7 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
         </View>
 
         <View style={{ paddingHorizontal: 20, gap: 10 }}>
-          {guidedMode && phase === "chatting" && (hint || hintLoading) && (
+          {phase === "chatting" && (hint || hintLoading) && (
             <HintCard
               reply={hint?.reply ?? null}
               gloss={hint?.gloss ?? null}
@@ -532,10 +573,17 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
               onRefresh={() => fetchHint(transcriptRef.current)}
             />
           )}
-          {turnLimitReached && (
+          {turnLimitReached ? (
             <Text size={13} weight="medium" color="signal" style={{ textAlign: "center" }}>
-              このセッションの会話上限に達しました。下のボタンでフィードバックを見てみましょう。
+              長い会話になりました。下の丸いボタンでフィードバックを見てみましょう。
             </Text>
+          ) : (
+            feedbackSuggested &&
+            phase === "chatting" && (
+              <Text size={13} color="inkSoft" style={{ textAlign: "center" }}>
+                十分に話せていますね。もう少し続けても、いつでも下のボタンでフィードバックを見てもOKです。
+              </Text>
+            )
           )}
           {!!error && (
             <Text size={13} color="rose" style={{ textAlign: "center" }}>
@@ -561,6 +609,21 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
             editable={!turnLimitReached}
             style={{ flex: 1 }}
           />
+          <Pressable
+            onPress={() => fetchHint(transcriptRef.current)}
+            disabled={hintLoading || turnLimitReached || phase !== "chatting"}
+            style={{
+              width: 46,
+              height: 46,
+              borderRadius: 23,
+              alignItems: "center",
+              justifyContent: "center",
+              backgroundColor: theme.colors.paperDim,
+              opacity: hintLoading || turnLimitReached || phase !== "chatting" ? 0.4 : 1,
+            }}
+          >
+            <Lightbulb size={20} color={theme.colors.inkSoft} strokeWidth={2} />
+          </Pressable>
           <Pressable
             onPress={handleMicMuteToggle}
             disabled={turnLimitReached || phase !== "chatting"}
@@ -606,7 +669,8 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
 
   if (phase === "chatting" && mode === "text") {
     return (
-      <View style={{ borderRadius: theme.radius.md, borderWidth: 1, borderColor: theme.colors.line, overflow: "hidden" }}>
+      <View style={[{ borderRadius: theme.radius.lg }, theme.shadows.card]}>
+      <View style={{ borderRadius: theme.radius.lg, backgroundColor: theme.colors.surface, overflow: "hidden" }}>
         <View
           style={{
             flexDirection: "row",
@@ -648,7 +712,7 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
           ))}
         </View>
 
-        {guidedMode && (hint || hintLoading) && (
+        {(hint || hintLoading) && (
           <View style={{ paddingHorizontal: 16, paddingBottom: 12 }}>
             <HintCard
               reply={hint?.reply ?? null}
@@ -659,10 +723,16 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
           </View>
         )}
 
-        {turnLimitReached && (
+        {turnLimitReached ? (
           <Text size={13} weight="medium" color="signal" style={{ paddingHorizontal: 16 }}>
-            このセッションの会話上限に達しました。下のボタンでフィードバックを見てみましょう。
+            長い会話になりました。下のボタンでフィードバックを見てみましょう。
           </Text>
+        ) : (
+          feedbackSuggested && (
+            <Text size={13} color="inkSoft" style={{ paddingHorizontal: 16 }}>
+              十分に話せていますね。もう少し続けても、いつでも下のボタンでフィードバックを見てもOKです。
+            </Text>
+          )
         )}
         {!!error && (
           <Text size={13} color="rose" style={{ paddingHorizontal: 16 }}>
@@ -687,14 +757,37 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
             />
           </View>
 
-          <Button
-            label={ending ? "フィードバックを作成中..." : "会話を終えてフィードバックを見る"}
-            variant="secondary"
-            onPress={handleEnd}
-            disabled={turnCount < 1 || ending}
-            fullWidth
-          />
+          <View style={{ flexDirection: "row", gap: 8 }}>
+            <Pressable
+              onPress={() => fetchHint(transcriptRef.current)}
+              disabled={hintLoading || turnLimitReached}
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 6,
+                borderRadius: 999,
+                borderWidth: 1,
+                borderColor: theme.colors.line,
+                paddingHorizontal: 16,
+                paddingVertical: 12,
+                opacity: hintLoading || turnLimitReached ? 0.4 : 1,
+              }}
+            >
+              <Lightbulb size={15} color={theme.colors.inkSoft} strokeWidth={2} />
+              <Text size={13} weight="medium" color="inkSoft">
+                ヒント
+              </Text>
+            </Pressable>
+            <Button
+              label={ending ? "フィードバックを作成中..." : "会話を終えてフィードバックを見る"}
+              variant="secondary"
+              onPress={handleEnd}
+              disabled={turnCount < 1 || ending}
+              style={{ flex: 1 }}
+            />
+          </View>
         </View>
+      </View>
       </View>
     );
   }

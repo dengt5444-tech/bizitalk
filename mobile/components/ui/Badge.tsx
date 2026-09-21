@@ -3,9 +3,17 @@ import { View } from "react-native";
 import { useTheme } from "@/theme/ThemeProvider";
 import { Text } from "./Text";
 
-type Accent = "signal" | "amber" | "rose" | "neutral";
+type Accent = "signal" | "amber" | "rose" | "neutral" | "violet" | "mint";
 
-export function Badge({ label, accent = "signal" }: { label: string; accent?: Accent }) {
+export function Badge({
+  label,
+  accent = "signal",
+  icon,
+}: {
+  label: string;
+  accent?: Accent;
+  icon?: React.ReactNode;
+}) {
   const theme = useTheme();
 
   const tint =
@@ -15,7 +23,11 @@ export function Badge({ label, accent = "signal" }: { label: string; accent?: Ac
         ? theme.colors.roseTint
         : accent === "neutral"
           ? theme.colors.paperDim
-          : theme.colors.signalTint;
+          : accent === "violet"
+            ? theme.colors.violetTint
+            : accent === "mint"
+              ? theme.colors.mintTint
+              : theme.colors.signalTint;
 
   const textColor =
     accent === "amber"
@@ -24,18 +36,26 @@ export function Badge({ label, accent = "signal" }: { label: string; accent?: Ac
         ? theme.colors.rose
         : accent === "neutral"
           ? theme.colors.inkSoft
-          : theme.colors.signalDim;
+          : accent === "violet"
+            ? theme.colors.violetDim
+            : accent === "mint"
+              ? theme.colors.mintDim
+              : theme.colors.signalDim;
 
   return (
     <View
       style={{
         alignSelf: "flex-start",
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 4,
         borderRadius: 999,
         paddingHorizontal: 10,
         paddingVertical: 5,
         backgroundColor: tint,
       }}
     >
+      {icon}
       <Text weight="semibold" size={11} style={{ color: textColor }}>
         {label}
       </Text>

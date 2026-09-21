@@ -3,18 +3,20 @@ import { Pressable, type GestureResponderEvent, type PressableProps, View, type 
 import { haptics } from "@/lib/haptics";
 import { useTheme } from "@/theme/ThemeProvider";
 
+// Material Design 3 style: a soft, layered shadow reads as "raised"
+// without needing a hard border — mirrors the web app's shift from
+// bordered flat cards to elevated ones (shadow-card in globals.css).
 export function Card({ style, ...rest }: ViewProps) {
   const theme = useTheme();
   return (
     <View
       style={[
         {
-          borderRadius: theme.radius.md,
-          borderWidth: 1,
-          borderColor: theme.colors.line,
+          borderRadius: theme.radius.lg,
           backgroundColor: theme.colors.surface,
           padding: theme.spacing(6),
         },
+        theme.shadows.card,
         style,
       ]}
       {...rest}
@@ -35,14 +37,13 @@ export function PressableCard({ style, onPress, ...rest }: PressableProps) {
       onPress={onPress ? handlePress : undefined}
       style={(state) => [
         {
-          borderRadius: theme.radius.md,
-          borderWidth: 1,
-          borderColor: theme.colors.line,
+          borderRadius: theme.radius.lg,
           backgroundColor: theme.colors.surface,
           padding: theme.spacing(6),
-          opacity: state.pressed ? 0.8 : 1,
+          opacity: state.pressed ? 0.85 : 1,
           transform: [{ scale: state.pressed ? 0.98 : 1 }],
         },
+        theme.shadows.card,
         typeof style === "function" ? style(state) : style,
       ]}
       {...rest}

@@ -3,7 +3,22 @@ import { Text as RNText, type TextProps as RNTextProps } from "react-native";
 import { useTheme } from "@/theme/ThemeProvider";
 
 type Weight = "regular" | "medium" | "semibold" | "bold" | "black";
-type ColorToken = "ink" | "inkSoft" | "inkFaint" | "signal" | "signalDim" | "amber" | "amberDim" | "rose" | "paper";
+type ColorToken =
+  | "ink"
+  | "inkSoft"
+  | "inkFaint"
+  | "signal"
+  | "signalDim"
+  | "amber"
+  | "amberDim"
+  | "rose"
+  | "paper"
+  | "mint"
+  | "mintDim"
+  | "violet"
+  | "violetDim"
+  | "blossom"
+  | "blossomDim";
 
 export type ThemedTextProps = RNTextProps & {
   variant?: "display" | "sans";

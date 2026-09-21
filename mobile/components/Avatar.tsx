@@ -26,8 +26,10 @@ export function Avatar({ name, size = "md" }: { name: string; size?: keyof typeo
   const palette = [
     { bg: theme.colors.signalTint, text: theme.colors.signalDim },
     { bg: theme.colors.amberTint, text: theme.colors.amberDim },
+    { bg: theme.colors.mintTint, text: theme.colors.mintDim },
+    { bg: theme.colors.violetTint, text: theme.colors.violetDim },
+    { bg: theme.colors.blossomTint, text: theme.colors.blossomDim },
     { bg: theme.colors.roseTint, text: theme.colors.rose },
-    { bg: theme.colors.paperDim, text: theme.colors.ink },
   ];
   const { bg, text } = palette[hashString(name) % palette.length];
   const dimension = SIZES[size];

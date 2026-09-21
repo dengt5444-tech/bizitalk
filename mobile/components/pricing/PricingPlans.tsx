@@ -1,5 +1,6 @@
 import { useRouter } from "expo-router";
 import { isUserCancelledError, useIAP, type ExpoPurchaseError, type Purchase } from "expo-iap";
+import { Check } from "lucide-react-native";
 import React, { useEffect, useState } from "react";
 import { Platform, View } from "react-native";
 import { Badge } from "@/components/ui/Badge";
@@ -22,20 +23,11 @@ type PlanCard = {
   name: string;
   futurePrice: string;
   price: string;
-  accent: "amber" | "signal";
+  accent: "amber" | "signal" | "violet";
   features: string[];
 };
 
 const PLANS: PlanCard[] = [
-  {
-    key: "listening",
-    badge: "先行提供価格",
-    name: "リスニングプラン",
-    futurePrice: "¥1,980",
-    price: "¥490",
-    accent: "amber",
-    features: ["全教材が聞き放題", "スクリプト・単語リスト付き", "理解度テストと単語復習リスト", "いつでも解約可能"],
-  },
   {
     key: "trial",
     badge: "先行提供価格",
@@ -45,7 +37,6 @@ const PLANS: PlanCard[] = [
     accent: "signal",
     features: [
       `AI英会話を月${CONVERSATION_MINUTES_PER_MONTH.trial}分まで練習`,
-      "リスニング教材は聞き放題",
       "会話ごとのAIコーチによるフィードバック",
       "いつでも解約可能",
     ],
@@ -56,10 +47,9 @@ const PLANS: PlanCard[] = [
     name: "スタンダードプラン",
     futurePrice: "¥9,800",
     price: "¥4,990",
-    accent: "signal",
+    accent: "violet",
     features: [
-      `全26シーンでAI会話練習(月${CONVERSATION_MINUTES_PER_MONTH.standard}分まで)`,
-      "リスニング教材は聞き放題",
+      `全31シーンでAI会話練習(月${CONVERSATION_MINUTES_PER_MONTH.standard}分まで)`,
       "リアルタイム音声・AIコーチのフィードバック",
       "マイページでの進捗トラッキング",
       "いつでも解約可能",
@@ -71,10 +61,9 @@ const PLANS: PlanCard[] = [
     name: "AI英会話使い放題プラン",
     futurePrice: "¥19,800",
     price: "¥9,900",
-    accent: "signal",
+    accent: "amber",
     features: [
       "AI英会話が実質使い放題",
-      "リスニング教材は聞き放題",
       "リアルタイム音声・AIコーチのフィードバック",
       "マイページでの進捗トラッキング",
       "いつでも解約可能",
@@ -85,12 +74,10 @@ const PLANS: PlanCard[] = [
 export function PricingPlans({
   isLoggedIn,
   conversationPlan,
-  listeningSubscribed,
   onCheckoutReturn,
 }: {
   isLoggedIn: boolean;
   conversationPlan: ConversationPlan | null;
-  listeningSubscribed: boolean;
   onCheckoutReturn?: () => void;
 }) {
   const theme = useTheme();
@@ -121,7 +108,6 @@ export function PricingPlans({
   }, [connected]);
 
   function isCurrentPlan(key: PlanCard["key"]) {
-    if (key === "listening") return listeningSubscribed && conversationPlan === null;
     return conversationPlan === key;
   }
 
@@ -225,11 +211,11 @@ export function PricingPlans({
     }
   }
 
-  async function handleManage(portalPlan: "conversation" | "listening", cardKey: CheckoutPlan) {
+  async function handleManage(cardKey: CheckoutPlan) {
     setError("");
     setLoadingPlan(cardKey);
     try {
-      const result = await openBillingPortal(portalPlan);
+      const result = await openBillingPortal("conversation");
       if (result.type === "success") onCheckoutReturn?.();
     } catch {
       setError("管理画面を開けませんでした。時間をおいて再度お試しください。");
@@ -250,22 +236,20 @@ export function PricingPlans({
 
       <View style={{ gap: 14 }}>
         {PLANS.map((plan) => {
-          const accentText = plan.accent === "amber" ? "amberDim" : "signal";
+          const accentText =
+            plan.accent === "amber" ? "amberDim" : plan.accent === "violet" ? "violetDim" : "signal";
+          const accentTint =
+            plan.accent === "amber" ? theme.colors.amberTint : plan.accent === "violet" ? theme.colors.violetTint : theme.colors.signalTint;
           const current = isCurrentPlan(plan.key);
           const isLoading = loadingPlan === plan.key;
           const iosSku = IAP_PRODUCT_ID_FOR_PLAN[plan.key];
           const iosProduct = subscriptions.find((subscription) => subscription.id === iosSku);
 
-          // Any active conversation-tier plan (trial/standard/unlimited)
-          // already includes listening access and is mutually exclusive
-          // with the other two tiers. Block purchasing a second,
-          // overlapping subscription instead of letting the user pay
-          // twice — this matters most on iOS, where StoreKit has no
+          // The three tiers are mutually exclusive. Block purchasing a
+          // second, overlapping subscription instead of letting the user
+          // pay twice — this matters most on iOS, where StoreKit has no
           // server-side awareness of the user's other subscriptions.
-          const hasActiveConversationPlan = conversationPlan !== null;
-          const coveredByConversationPlan = plan.key === "listening" && hasActiveConversationPlan && !current;
-          const overlapsAnotherConversationPlan = plan.key !== "listening" && hasActiveConversationPlan && !current;
-          const blockedByExistingPlan = coveredByConversationPlan || overlapsAnotherConversationPlan;
+          const blockedByExistingPlan = conversationPlan !== null && !current;
 
           return (
             <Card key={plan.key} style={{ alignItems: "center", gap: 14, paddingVertical: 24 }}>
@@ -286,9 +270,12 @@ export function PricingPlans({
               <View style={{ gap: 6, alignSelf: "stretch" }}>
                 {plan.features.map((feature) => (
                   <View key={feature} style={{ flexDirection: "row", gap: 8, alignItems: "flex-start" }}>
-                    <Text size={13} color={accentText as "amberDim" | "signal"}>
-                      ✓
-                    </Text>
+                    <Check
+                      size={14}
+                      strokeWidth={2.5}
+                      color={theme.colors[accentText as "amberDim" | "signal" | "violetDim"]}
+                      style={{ marginTop: 2 }}
+                    />
                     <Text size={13} color="inkSoft" style={{ flex: 1, lineHeight: 18 }}>
                       {feature}
                     </Text>
@@ -303,10 +290,10 @@ export function PricingPlans({
                       borderRadius: 999,
                       paddingHorizontal: 16,
                       paddingVertical: 10,
-                      backgroundColor: plan.accent === "amber" ? theme.colors.amberTint : theme.colors.signalTint,
+                      backgroundColor: accentTint,
                     }}
                   >
-                    <Text size={13} weight="semibold" color={accentText as "amberDim" | "signal"}>
+                    <Text size={13} weight="semibold" color={accentText as "amberDim" | "signal" | "violetDim"}>
                       現在ご登録中です
                     </Text>
                   </View>
@@ -314,7 +301,7 @@ export function PricingPlans({
                     label="お支払い方法の変更・解約はこちら"
                     variant="secondary"
                     loading={isLoading}
-                    onPress={() => handleManage(plan.key === "listening" ? "listening" : "conversation", plan.key)}
+                    onPress={() => handleManage(plan.key)}
                   />
                 </View>
               ) : blockedByExistingPlan ? (
@@ -328,9 +315,7 @@ export function PricingPlans({
                   }}
                 >
                   <Text size={13} color="inkFaint" style={{ textAlign: "center" }}>
-                    {coveredByConversationPlan
-                      ? "ご利用中の会話プランに含まれています"
-                      : "他の会話プランをご利用中です"}
+                    他の会話プランをご利用中です
                   </Text>
                 </View>
               ) : Platform.OS === "ios" ? (

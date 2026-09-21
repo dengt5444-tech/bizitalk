@@ -7,18 +7,14 @@ import { ErrorState } from "@/components/ui/ErrorState";
 import { ScreenScroll } from "@/components/ui/ScreenContainer";
 import { SkeletonList } from "@/components/ui/Skeleton";
 import { Heading, Text } from "@/components/ui/Text";
-import { useAuth } from "@/context/AuthProvider";
 import { useTheme } from "@/theme/ThemeProvider";
-import { isListeningEntitled } from "@/lib/entitlements";
 import { listVocabDecks, type VocabDeckSummary } from "@/lib/queries/vocab";
 
 export default function VocabularyScreen() {
   const theme = useTheme();
   const router = useRouter();
-  const { user } = useAuth();
   const [decks, setDecks] = useState<VocabDeckSummary[] | null>(null);
   const [loadError, setLoadError] = useState(false);
-  const [subscribed, setSubscribed] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
   const reload = useCallback(() => {
@@ -33,10 +29,6 @@ export default function VocabularyScreen() {
   useEffect(() => {
     reload();
   }, [reload]);
-
-  useEffect(() => {
-    isListeningEntitled(user?.id).then(setSubscribed);
-  }, [user]);
 
   async function handleRefresh() {
     setRefreshing(true);
@@ -77,37 +69,27 @@ export default function VocabularyScreen() {
           単語帳
         </Heading>
         <Text color="inkSoft" style={{ marginTop: 6, lineHeight: 20 }}>
-          外資系企業でよく使われるビジネス英単語や、ワーキングホリデーの職場で役立つ実務英語をテーマ別に学べます。フラッシュカードと4択テストで、覚えたかどうかその場で確認できます。
+          外資系企業でよく使われるビジネス英単語や、ワーキングホリデーの職場で役立つ実務英語をテーマ別に学べます。フラッシュカードと4択テストで、覚えたかどうかその場で確認できます。すべて無料でご利用いただけます。
         </Text>
       </View>
 
       <View style={{ gap: 12 }}>
-        {decks.map((deck) => {
-          const unlocked = deck.is_free || subscribed;
-          return (
-            <PressableCard
-              key={deck.id}
-              onPress={() => router.push(`/(tabs)/vocabulary/${deck.slug}`)}
-              style={{ gap: 8 }}
-            >
-              <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-                <Badge label={`${deck.items.length}語`} accent="neutral" />
-                {deck.is_free ? (
-                  <Badge label="無料" accent="amber" />
-                ) : !unlocked ? (
-                  <Badge label="ロック中" accent="neutral" />
-                ) : null}
-              </View>
-              <Text weight="semibold">{deck.title}</Text>
-              <Text size={13} color="inkSoft" style={{ lineHeight: 18 }}>
-                {deck.description}
-              </Text>
-              <Text size={13} color="signal" weight="medium">
-                {unlocked ? "学習する →" : "詳細を見る →"}
-              </Text>
-            </PressableCard>
-          );
-        })}
+        {decks.map((deck) => (
+          <PressableCard
+            key={deck.id}
+            onPress={() => router.push(`/(tabs)/vocabulary/${deck.slug}`)}
+            style={{ gap: 8 }}
+          >
+            <Badge label={`${deck.items.length}語`} accent="neutral" />
+            <Text weight="semibold">{deck.title}</Text>
+            <Text size={13} color="inkSoft" style={{ lineHeight: 18 }}>
+              {deck.description}
+            </Text>
+            <Text size={13} color="signal" weight="medium">
+              学習する →
+            </Text>
+          </PressableCard>
+        ))}
       </View>
     </ScreenScroll>
   );

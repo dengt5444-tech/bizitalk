@@ -1,14 +1,12 @@
 import { useLocalSearchParams } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, View } from "react-native";
-import { LockCard } from "@/components/LockCard";
 import { Badge } from "@/components/ui/Badge";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { ScreenScroll } from "@/components/ui/ScreenContainer";
 import { Heading, Text } from "@/components/ui/Text";
 import { VocabDeckPractice } from "@/components/vocab/VocabDeckPractice";
 import { useAuth } from "@/context/AuthProvider";
-import { isListeningEntitled } from "@/lib/entitlements";
 import { getVocabDeckBySlug, type VocabDeckSummary } from "@/lib/queries/vocab";
 
 export default function VocabDeckScreen() {
@@ -16,7 +14,6 @@ export default function VocabDeckScreen() {
   const { user } = useAuth();
   const [deck, setDeck] = useState<VocabDeckSummary | null | undefined>(undefined);
   const [loadError, setLoadError] = useState(false);
-  const [subscribed, setSubscribed] = useState(false);
 
   const reload = useCallback(() => {
     if (typeof slug !== "string") return Promise.resolve();
@@ -31,10 +28,6 @@ export default function VocabDeckScreen() {
   useEffect(() => {
     reload();
   }, [reload]);
-
-  useEffect(() => {
-    isListeningEntitled(user?.id).then(setSubscribed);
-  }, [user]);
 
   if (deck === undefined) {
     if (loadError) {
@@ -59,13 +52,10 @@ export default function VocabDeckScreen() {
     );
   }
 
-  const unlocked = deck.is_free || subscribed;
-
   return (
     <ScreenScroll contentContainerStyle={{ gap: 16 }}>
       <View style={{ flexDirection: "row", gap: 8 }}>
         <Badge label={`${deck.items.length}語`} accent="signal" />
-        {deck.is_free && <Badge label="無料お試し" accent="amber" />}
       </View>
 
       <View>
@@ -75,11 +65,7 @@ export default function VocabDeckScreen() {
         </Text>
       </View>
 
-      {unlocked ? (
-        <VocabDeckPractice deckTitle={deck.title} words={deck.items} isLoggedIn={!!user} />
-      ) : (
-        <LockCard isLoggedIn={!!user} kind="deck" />
-      )}
+      <VocabDeckPractice deckTitle={deck.title} words={deck.items} isLoggedIn={!!user} />
     </ScreenScroll>
   );
 }

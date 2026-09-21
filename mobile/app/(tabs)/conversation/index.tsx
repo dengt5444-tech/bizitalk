@@ -1,6 +1,7 @@
 import { useRouter } from "expo-router";
+import { ChevronDown, Clock } from "lucide-react-native";
 import React, { useCallback, useEffect, useState } from "react";
-import { RefreshControl, View } from "react-native";
+import { Pressable, RefreshControl, View } from "react-native";
 import { Avatar } from "@/components/Avatar";
 import { Badge } from "@/components/ui/Badge";
 import { PressableCard } from "@/components/ui/Card";
@@ -23,6 +24,7 @@ export default function ConversationScreen() {
   const [loadError, setLoadError] = useState(false);
   const [subscribed, setSubscribed] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [collapsed, setCollapsed] = useState<Set<ScenarioCategory>>(new Set());
 
   const reload = useCallback(() => {
     return listScenarios()
@@ -48,6 +50,15 @@ export default function ConversationScreen() {
     } finally {
       setRefreshing(false);
     }
+  }
+
+  function toggleCategory(category: ScenarioCategory) {
+    setCollapsed((prev) => {
+      const next = new Set(prev);
+      if (next.has(category)) next.delete(category);
+      else next.add(category);
+      return next;
+    });
   }
 
   if (!scenarios) {
@@ -124,51 +135,71 @@ export default function ConversationScreen() {
       {CATEGORY_ORDER.map((category) => {
         const items = groups.get(category) ?? [];
         if (items.length === 0) return null;
+        const isOpen = !collapsed.has(category);
 
         return (
           <View key={category} style={{ gap: 12 }}>
-            <View>
-              <View style={{ flexDirection: "row", alignItems: "baseline", gap: 8 }}>
-                <Heading level={3}>{CATEGORY_LABELS[category]}</Heading>
-                <Text size={13} color="inkFaint">
-                  {items.length}シーン
+            <Pressable
+              onPress={() => toggleCategory(category)}
+              style={{ flexDirection: "row", alignItems: "flex-start", gap: 8 }}
+            >
+              <View style={{ flex: 1 }}>
+                <View style={{ flexDirection: "row", alignItems: "baseline", gap: 8 }}>
+                  <Heading level={3}>{CATEGORY_LABELS[category]}</Heading>
+                  <Text size={13} color="inkFaint">
+                    {items.length}シーン
+                  </Text>
+                </View>
+                <Text size={13} color="inkSoft" style={{ marginTop: 2 }}>
+                  {CATEGORY_DESCRIPTIONS[category]}
                 </Text>
               </View>
-              <Text size={13} color="inkSoft" style={{ marginTop: 2 }}>
-                {CATEGORY_DESCRIPTIONS[category]}
-              </Text>
-            </View>
+              <View style={{ transform: [{ rotate: isOpen ? "180deg" : "0deg" }], marginTop: 4 }}>
+                <ChevronDown size={18} strokeWidth={2} color={theme.colors.inkFaint} />
+              </View>
+            </Pressable>
 
-            {items.map((scenario) => {
-              const unlocked = loggedInAndEntitled(scenario.is_free);
-              return (
-                <PressableCard
-                  key={scenario.id}
-                  onPress={() => router.push(`/(tabs)/conversation/${scenario.slug}`)}
-                  style={{ gap: 8 }}
-                >
-                  <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-                    <Avatar name={scenario.persona_name} size="sm" />
-                    <Text weight="semibold" style={{ flex: 1 }}>
-                      {scenario.title}
+            {isOpen &&
+              items.map((scenario) => {
+                const unlocked = loggedInAndEntitled(scenario.is_free);
+                return (
+                  <PressableCard
+                    key={scenario.id}
+                    onPress={() => router.push(`/(tabs)/conversation/${scenario.slug}`)}
+                    style={{ gap: 8 }}
+                  >
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                      <Avatar name={scenario.persona_name} size="sm" />
+                      <Text weight="semibold" style={{ flex: 1 }}>
+                        {scenario.title}
+                      </Text>
+                      <Badge label={LEVEL_LABELS[(scenario.level as ScenarioLevel) ?? "beginner"]} accent="neutral" />
+                    </View>
+                    <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 8 }}>
+                      <Text size={12} weight="medium" color="signal">
+                        話し相手: {scenario.persona_name}({scenario.persona_role})
+                      </Text>
+                      {!!scenario.estimated_minutes && (
+                        <View style={{ flexDirection: "row", alignItems: "center", gap: 3 }}>
+                          <Clock size={11} strokeWidth={2} color={theme.colors.inkFaint} />
+                          <Text size={12} color="inkFaint">
+                            目安 {scenario.estimated_minutes}分
+                          </Text>
+                        </View>
+                      )}
+                    </View>
+                    <Text size={13} color="inkSoft" style={{ lineHeight: 18 }}>
+                      {scenario.description}
                     </Text>
-                    <Badge label={LEVEL_LABELS[(scenario.level as ScenarioLevel) ?? "beginner"]} accent="neutral" />
-                  </View>
-                  <Text size={12} weight="medium" color="signal">
-                    話し相手: {scenario.persona_name}({scenario.persona_role})
-                  </Text>
-                  <Text size={13} color="inkSoft" style={{ lineHeight: 18 }}>
-                    {scenario.description}
-                  </Text>
-                  <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-                    <Text size={13} color="signal" weight="medium">
-                      {unlocked ? "話してみる →" : "詳細を見る →"}
-                    </Text>
-                    {scenario.is_free && <Badge label="無料" accent="amber" />}
-                  </View>
-                </PressableCard>
-              );
-            })}
+                    <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+                      <Text size={13} color="signal" weight="medium">
+                        {unlocked ? "話してみる →" : "詳細を見る →"}
+                      </Text>
+                      {scenario.is_free && <Badge label="無料" accent="amber" />}
+                    </View>
+                  </PressableCard>
+                );
+              })}
           </View>
         );
       })}

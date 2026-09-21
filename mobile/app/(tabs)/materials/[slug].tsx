@@ -5,14 +5,12 @@ import { AudioPlayer } from "@/components/materials/AudioPlayer";
 import { DialogueTranscript } from "@/components/materials/DialogueTranscript";
 import { Quiz } from "@/components/materials/Quiz";
 import { VocabList } from "@/components/materials/VocabList";
-import { LockCard } from "@/components/LockCard";
 import { Badge } from "@/components/ui/Badge";
 import { Card } from "@/components/ui/Card";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { ScreenScroll } from "@/components/ui/ScreenContainer";
 import { Heading, Text } from "@/components/ui/Text";
 import { useAuth } from "@/context/AuthProvider";
-import { isListeningEntitled } from "@/lib/entitlements";
 import { LEVEL_LABELS, type MaterialDetail } from "@/lib/materials";
 import { getMaterialBySlug } from "@/lib/queries/materials";
 
@@ -21,7 +19,6 @@ export default function MaterialDetailScreen() {
   const { user } = useAuth();
   const [material, setMaterial] = useState<MaterialDetail | null | undefined>(undefined);
   const [loadError, setLoadError] = useState(false);
-  const [subscribed, setSubscribed] = useState(false);
   const [showScript, setShowScript] = useState(false);
 
   const reload = useCallback(() => {
@@ -37,10 +34,6 @@ export default function MaterialDetailScreen() {
   useEffect(() => {
     reload();
   }, [reload]);
-
-  useEffect(() => {
-    isListeningEntitled(user?.id).then(setSubscribed);
-  }, [user]);
 
   if (material === undefined) {
     if (loadError) {
@@ -65,13 +58,10 @@ export default function MaterialDetailScreen() {
     );
   }
 
-  const unlocked = material.is_free || subscribed;
-
   return (
     <ScreenScroll contentContainerStyle={{ gap: 16 }}>
       <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
         <Badge label={LEVEL_LABELS[material.level] ?? "初級"} accent="signal" />
-        {material.is_free && <Badge label="無料お試し" accent="amber" />}
       </View>
 
       <View>
@@ -81,42 +71,36 @@ export default function MaterialDetailScreen() {
         </Text>
       </View>
 
-      {unlocked ? (
-        <>
-          <Card style={{ gap: 12 }}>
-            <AudioPlayer materialId={material.id} />
-            <Pressable onPress={() => setShowScript((v) => !v)}>
-              <Text weight="semibold" color="signal" size={14}>
-                {showScript ? "スクリプトを隠す" : "スクリプトを表示"}
-              </Text>
-            </Pressable>
-            {showScript &&
-              (material.dialogue.length > 0 ? (
-                <DialogueTranscript dialogue={material.dialogue} />
-              ) : (
-                <Text color="inkSoft" style={{ lineHeight: 20 }}>
-                  {material.script}
-                </Text>
-              ))}
-          </Card>
+      <Card style={{ gap: 12 }}>
+        <AudioPlayer materialId={material.id} />
+        <Pressable onPress={() => setShowScript((v) => !v)}>
+          <Text weight="semibold" color="signal" size={14}>
+            {showScript ? "スクリプトを隠す" : "スクリプトを表示"}
+          </Text>
+        </Pressable>
+        {showScript &&
+          (material.dialogue.length > 0 ? (
+            <DialogueTranscript dialogue={material.dialogue} />
+          ) : (
+            <Text color="inkSoft" style={{ lineHeight: 20 }}>
+              {material.script}
+            </Text>
+          ))}
+      </Card>
 
-          <VocabList
-            materialId={material.id}
-            materialTitle={material.title}
-            vocab={material.vocab}
-            isLoggedIn={!!user}
-          />
+      <VocabList
+        materialId={material.id}
+        materialTitle={material.title}
+        vocab={material.vocab}
+        isLoggedIn={!!user}
+      />
 
-          <Quiz
-            materialId={material.id}
-            materialTitle={material.title}
-            questions={material.quiz}
-            isLoggedIn={!!user}
-          />
-        </>
-      ) : (
-        <LockCard isLoggedIn={!!user} />
-      )}
+      <Quiz
+        materialId={material.id}
+        materialTitle={material.title}
+        questions={material.quiz}
+        isLoggedIn={!!user}
+      />
     </ScreenScroll>
   );
 }

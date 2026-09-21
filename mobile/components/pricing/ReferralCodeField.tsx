@@ -1,10 +1,14 @@
+import { Tag } from "lucide-react-native";
 import React, { useEffect, useState } from "react";
 import { View } from "react-native";
+import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { Text } from "@/components/ui/Text";
 import { getStoredReferralCode, setStoredReferralCode } from "@/lib/referral";
+import { useTheme } from "@/theme/ThemeProvider";
 
 export function ReferralCodeField({ onChange }: { onChange: (code: string) => void }) {
+  const theme = useTheme();
   const [code, setCode] = useState("");
 
   useEffect(() => {
@@ -23,17 +27,23 @@ export function ReferralCodeField({ onChange }: { onChange: (code: string) => vo
   }
 
   return (
-    <View style={{ gap: 6, maxWidth: 260, alignSelf: "center", width: "100%" }}>
-      <Text size={12} weight="medium" color="inkSoft" style={{ textAlign: "center" }}>
-        紹介コード(お持ちの方のみ)
+    <Card style={{ gap: 4, maxWidth: 320, alignSelf: "center", width: "100%", paddingVertical: 16 }}>
+      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6 }}>
+        <Tag size={15} color={theme.colors.signal} strokeWidth={2} />
+        <Text size={14} weight="semibold" style={{ textAlign: "center" }}>
+          紹介コードをお持ちですか?
+        </Text>
+      </View>
+      <Text size={12} color="inkSoft" style={{ textAlign: "center" }}>
+        インフルエンサーやパートナーからコードをもらった方は、こちらに入力してください。なくても登録できます。
       </Text>
       <Input
         value={code}
         onChangeText={handleChange}
         placeholder="例: AB12CD34"
         autoCapitalize="characters"
-        style={{ textAlign: "center", letterSpacing: 2 }}
+        style={{ textAlign: "center", letterSpacing: 2, marginTop: 8 }}
       />
-    </View>
+    </Card>
   );
 }

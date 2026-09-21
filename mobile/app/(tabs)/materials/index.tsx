@@ -1,25 +1,20 @@
 import { useRouter } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import { RefreshControl, View } from "react-native";
-import { Badge } from "@/components/ui/Badge";
 import { PressableCard } from "@/components/ui/Card";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { ScreenScroll } from "@/components/ui/ScreenContainer";
 import { SkeletonList } from "@/components/ui/Skeleton";
 import { Heading, Text } from "@/components/ui/Text";
-import { useAuth } from "@/context/AuthProvider";
 import { useTheme } from "@/theme/ThemeProvider";
-import { isListeningEntitled } from "@/lib/entitlements";
 import { LEVEL_LABELS, LEVEL_ORDER, type MaterialLevel, type MaterialSummary } from "@/lib/materials";
 import { listMaterials } from "@/lib/queries/materials";
 
 export default function MaterialsScreen() {
   const theme = useTheme();
   const router = useRouter();
-  const { user } = useAuth();
   const [materials, setMaterials] = useState<MaterialSummary[] | null>(null);
   const [loadError, setLoadError] = useState(false);
-  const [subscribed, setSubscribed] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
   const reload = useCallback(() => {
@@ -34,10 +29,6 @@ export default function MaterialsScreen() {
   useEffect(() => {
     reload();
   }, [reload]);
-
-  useEffect(() => {
-    isListeningEntitled(user?.id).then(setSubscribed);
-  }, [user]);
 
   async function handleRefresh() {
     setRefreshing(true);
@@ -90,7 +81,7 @@ export default function MaterialsScreen() {
           リスニング教材一覧
         </Heading>
         <Text color="inkSoft" style={{ marginTop: 6, lineHeight: 20 }}>
-          無料お試しの教材から、超上級のビジネス英語まで。リスニングプランへの登録でレベルを問わず全教材が聞き放題になります。
+          初級から超上級のビジネス英語まで、全教材いつでも無料で聞き放題です。
         </Text>
       </View>
 
@@ -113,33 +104,21 @@ export default function MaterialsScreen() {
               </Text>
             </View>
 
-            {items.map((material) => {
-              const unlocked = material.is_free || subscribed;
-              return (
-                <PressableCard
-                  key={material.id}
-                  onPress={() => router.push(`/(tabs)/materials/${material.slug}`)}
-                  style={{ gap: 8 }}
-                >
-                  <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 8 }}>
-                    <Text weight="semibold" style={{ flex: 1 }}>
-                      {material.title}
-                    </Text>
-                    {material.is_free ? (
-                      <Badge label="無料" accent="amber" />
-                    ) : !unlocked ? (
-                      <Badge label="ロック中" accent="neutral" />
-                    ) : null}
-                  </View>
-                  <Text size={13} color="inkSoft" style={{ lineHeight: 18 }}>
-                    {material.description}
-                  </Text>
-                  <Text size={13} color="signal" weight="medium">
-                    {unlocked ? "再生する →" : "詳細を見る →"}
-                  </Text>
-                </PressableCard>
-              );
-            })}
+            {items.map((material) => (
+              <PressableCard
+                key={material.id}
+                onPress={() => router.push(`/(tabs)/materials/${material.slug}`)}
+                style={{ gap: 8 }}
+              >
+                <Text weight="semibold">{material.title}</Text>
+                <Text size={13} color="inkSoft" style={{ lineHeight: 18 }}>
+                  {material.description}
+                </Text>
+                <Text size={13} color="signal" weight="medium">
+                  再生する →
+                </Text>
+              </PressableCard>
+            ))}
           </View>
         );
       })}

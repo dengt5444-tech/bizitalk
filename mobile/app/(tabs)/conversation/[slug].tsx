@@ -1,4 +1,5 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
+import { BookOpen, Clock } from "lucide-react-native";
 import React, { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, View } from "react-native";
 import { Avatar } from "@/components/Avatar";
@@ -13,11 +14,13 @@ import { useAuth } from "@/context/AuthProvider";
 import { isEntitled } from "@/lib/entitlements";
 import { CATEGORY_LABELS, LEVEL_LABELS, type ScenarioCategory, type ScenarioLevel } from "@/lib/scenarios";
 import { getScenarioBySlug, type ScenarioDetail } from "@/lib/queries/scenarios";
+import { useTheme } from "@/theme/ThemeProvider";
 
 export default function ConversationScenarioScreen() {
   const { slug } = useLocalSearchParams<{ slug: string }>();
   const router = useRouter();
   const { user } = useAuth();
+  const theme = useTheme();
   const [scenario, setScenario] = useState<ScenarioDetail | null | undefined>(undefined);
   const [loadError, setLoadError] = useState(false);
   const [subscribed, setSubscribed] = useState(false);
@@ -72,6 +75,13 @@ export default function ConversationScenarioScreen() {
       <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
         <Badge label={CATEGORY_LABELS[(scenario.category as ScenarioCategory) ?? "teammates"]} accent="neutral" />
         <Badge label={LEVEL_LABELS[(scenario.level as ScenarioLevel) ?? "beginner"]} accent="signal" />
+        {!!scenario.estimated_minutes && (
+          <Badge
+            label={`目安 ${scenario.estimated_minutes}分`}
+            accent="neutral"
+            icon={<Clock size={11} strokeWidth={2} color={theme.colors.inkFaint} />}
+          />
+        )}
         {scenario.is_free && <Badge label="無料お試し" accent="amber" />}
       </View>
 
@@ -91,6 +101,27 @@ export default function ConversationScenarioScreen() {
         <Text size={13} color="inkFaint" style={{ lineHeight: 18 }}>
           {scenario.persona_background}
         </Text>
+      )}
+
+      {(!!scenario.briefing_en || !!scenario.briefing_ja) && (
+        <Card style={{ gap: 8, backgroundColor: theme.colors.signalTint }}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+            <BookOpen size={14} strokeWidth={2} color={theme.colors.signalDim} />
+            <Text size={11} weight="semibold" color="signalDim" style={{ letterSpacing: 1 }}>
+              始める前に読んでおきましょう
+            </Text>
+          </View>
+          {!!scenario.briefing_en && (
+            <Text size={13} style={{ lineHeight: 19 }}>
+              {scenario.briefing_en}
+            </Text>
+          )}
+          {!!scenario.briefing_ja && (
+            <Text size={13} color="inkSoft" style={{ lineHeight: 19 }}>
+              {scenario.briefing_ja}
+            </Text>
+          )}
+        </Card>
       )}
 
       {unlocked ? (
