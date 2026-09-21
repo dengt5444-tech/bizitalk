@@ -23,19 +23,36 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "invalid_scenario" }, { status: 400 });
   }
 
-  const { data: scenario } = await supabase
-    .from("conversation_scenarios")
-    .select(
-      "id, slug, title, description, category, level, persona_name, persona_role, voice, opening_line, is_free",
-    )
-    .eq("slug", scenarioSlug)
-    .maybeSingle();
+  const startOfMonth = new Date();
+  startOfMonth.setUTCDate(1);
+  startOfMonth.setUTCHours(0, 0, 0, 0);
+
+  // The scenario lookup, the plan lookup, and the monthly-usage lookup
+  // don't depend on each other's results (only on `user`, already known)
+  // — running them concurrently instead of one after another was most of
+  // where "starting a conversation" spent its time, since each is its own
+  // network round trip to Supabase. The usage rows are fetched
+  // unconditionally (cheap indexed query) since we don't know yet whether
+  // the plan even has a cap; capMinutes decides below whether to use them.
+  const [{ data: scenario }, plan, { data: usageRows }] = await Promise.all([
+    supabase
+      .from("conversation_scenarios")
+      .select(
+        "id, slug, title, description, category, level, persona_name, persona_role, voice, opening_line, is_free",
+      )
+      .eq("slug", scenarioSlug)
+      .maybeSingle(),
+    getConversationPlan(user, supabase),
+    supabase
+      .from("conversation_sessions")
+      .select("duration_seconds")
+      .eq("user_id", user.id)
+      .gte("created_at", startOfMonth.toISOString()),
+  ]);
 
   if (!scenario) {
     return NextResponse.json({ error: "not_found" }, { status: 404 });
   }
-
-  const plan = await getConversationPlan(user, supabase);
 
   if (!scenario.is_free && plan === null) {
     return NextResponse.json({ error: "payment_required" }, { status: 403 });
@@ -43,17 +60,7 @@ export async function POST(request: Request) {
 
   const capMinutes = minutesCapFor(plan);
   if (capMinutes !== null) {
-    const startOfMonth = new Date();
-    startOfMonth.setUTCDate(1);
-    startOfMonth.setUTCHours(0, 0, 0, 0);
-
-    const { data: rows } = await supabase
-      .from("conversation_sessions")
-      .select("duration_seconds")
-      .eq("user_id", user.id)
-      .gte("created_at", startOfMonth.toISOString());
-
-    const usedSeconds = (rows ?? []).reduce(
+    const usedSeconds = (usageRows ?? []).reduce(
       (sum, row) => sum + (row.duration_seconds ?? 0),
       0,
     );

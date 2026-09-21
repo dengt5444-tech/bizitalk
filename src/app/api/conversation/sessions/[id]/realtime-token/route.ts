@@ -41,17 +41,6 @@ export async function POST(
     return NextResponse.json({ error: "session_ended" }, { status: 409 });
   }
 
-  // Recorded server-side (not trusted from the client) so the session's
-  // eventual duration can't be understated for the monthly minutes cap.
-  // Only set on the first token issuance for this session.
-  if (!session.realtime_started_at) {
-    await supabase
-      .from("conversation_sessions")
-      .update({ realtime_started_at: new Date().toISOString() })
-      .eq("id", id)
-      .eq("user_id", user.id);
-  }
-
   const scenario = Array.isArray(session.conversation_scenarios)
     ? session.conversation_scenarios[0]
     : session.conversation_scenarios;
@@ -64,28 +53,45 @@ export async function POST(
   const instructions = `${withCustomTopic(scenario.system_prompt, session.custom_topic)}\n${REALTIME_SYSTEM_SUFFIX.replace("{{OPENING_LINE}}", openingLine)}`;
   const safetyIdentifier = createHash("sha256").update(user.id).digest("hex");
 
-  const response = await fetch("https://api.openai.com/v1/realtime/client_secrets", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-      "Content-Type": "application/json",
-      "OpenAI-Safety-Identifier": safetyIdentifier,
-    },
-    body: JSON.stringify({
-      session: {
-        type: "realtime",
-        model: REALTIME_MODEL,
-        instructions,
-        audio: {
-          output: { voice: scenario.realtime_voice },
-          input: {
-            transcription: { model: "whisper-1" },
-            turn_detection: { type: "semantic_vad" },
+  // The "first token issuance" bookkeeping write doesn't need to finish
+  // before we can ask OpenAI for the ephemeral key — nothing downstream
+  // depends on it — so it runs alongside that request instead of blocking
+  // it. OpenAI's response is what the caller is actually waiting on, since
+  // it's the last thing standing between clicking "start" and being able
+  // to talk.
+  const bookkeepingPromise = session.realtime_started_at
+    ? Promise.resolve()
+    : supabase
+        .from("conversation_sessions")
+        .update({ realtime_started_at: new Date().toISOString() })
+        .eq("id", id)
+        .eq("user_id", user.id);
+
+  const [response] = await Promise.all([
+    fetch("https://api.openai.com/v1/realtime/client_secrets", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+        "Content-Type": "application/json",
+        "OpenAI-Safety-Identifier": safetyIdentifier,
+      },
+      body: JSON.stringify({
+        session: {
+          type: "realtime",
+          model: REALTIME_MODEL,
+          instructions,
+          audio: {
+            output: { voice: scenario.realtime_voice },
+            input: {
+              transcription: { model: "whisper-1" },
+              turn_detection: { type: "semantic_vad" },
+            },
           },
         },
-      },
+      }),
     }),
-  });
+    bookkeepingPromise,
+  ]);
 
   if (!response.ok) {
     const detail = await response.text();

@@ -6,6 +6,10 @@ import type { ConversationTurn } from "@/lib/conversation";
 
 const AUDIO_BUCKET = "bizitalk-audio";
 const SIGNED_URL_TTL_SECONDS = 60 * 30;
+// See materials/[id]/audio/route.ts — lets a repeat play (or the replay
+// button on an already-heard turn) reuse the redirect without re-hitting
+// this route and Supabase's sign API.
+const REDIRECT_CACHE_HEADERS = { "Cache-Control": `private, max-age=${SIGNED_URL_TTL_SECONDS - 120}` };
 
 export async function GET(
   _request: Request,
@@ -54,7 +58,7 @@ export async function GET(
     .createSignedUrl(objectPath, SIGNED_URL_TTL_SECONDS);
 
   if (signed?.signedUrl) {
-    return NextResponse.redirect(signed.signedUrl);
+    return NextResponse.redirect(signed.signedUrl, { headers: REDIRECT_CACHE_HEADERS });
   }
 
   const openai = createOpenAIClient();
@@ -76,7 +80,7 @@ export async function GET(
     .createSignedUrl(objectPath, SIGNED_URL_TTL_SECONDS);
 
   if (freshSigned?.signedUrl) {
-    return NextResponse.redirect(freshSigned.signedUrl);
+    return NextResponse.redirect(freshSigned.signedUrl, { headers: REDIRECT_CACHE_HEADERS });
   }
 
   return new NextResponse(buffer, {

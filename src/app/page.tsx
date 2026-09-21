@@ -100,13 +100,13 @@ export default function Home() {
             <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row lg:justify-start">
               <Link
                 href="/conversation"
-                className="cta-pulse rounded-full bg-signal px-8 py-3.5 text-base font-medium text-paper shadow-card transition duration-300 hover:-translate-y-0.5 hover:scale-[1.03] hover:bg-signal-dim hover:shadow-card-hover active:scale-[0.98]"
+                className="cta-pulse rounded-full bg-signal px-8 py-3.5 text-base font-medium text-paper shadow-card transition duration-150 hover:-translate-y-0.5 hover:scale-[1.03] hover:bg-signal-dim hover:shadow-card-hover active:scale-[0.98] active:duration-75"
               >
                 AIと話してみる(無料)
               </Link>
               <Link
                 href="/pricing"
-                className="rounded-full bg-surface px-8 py-3.5 text-base font-medium text-ink shadow-card transition duration-300 hover:-translate-y-0.5 hover:scale-[1.03] hover:shadow-card-hover active:scale-[0.98]"
+                className="rounded-full bg-surface px-8 py-3.5 text-base font-medium text-ink shadow-card transition duration-150 hover:-translate-y-0.5 hover:scale-[1.03] hover:shadow-card-hover active:scale-[0.98] active:duration-75"
               >
                 料金プランを見る
               </Link>
@@ -269,7 +269,7 @@ export default function Home() {
             <div className="mt-8">
               <Link
                 href="/conversation"
-                className="inline-block rounded-full bg-signal px-8 py-3.5 text-base font-medium text-paper shadow-elevated transition duration-300 hover:-translate-y-0.5 hover:scale-[1.03] hover:bg-signal-dim active:scale-[0.98]"
+                className="inline-block rounded-full bg-signal px-8 py-3.5 text-base font-medium text-paper shadow-elevated transition duration-150 hover:-translate-y-0.5 hover:scale-[1.03] hover:bg-signal-dim active:scale-[0.98] active:duration-75"
               >
                 無料のシーンから始める
               </Link>

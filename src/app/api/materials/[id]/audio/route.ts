@@ -11,6 +11,11 @@ import type { DialogueLine } from "@/lib/materials";
 // re-synthesized.
 const AUDIO_BUCKET = "gakuto-audio";
 const SIGNED_URL_TTL_SECONDS = 60 * 30;
+// Lets the browser reuse the redirect itself on a repeat visit/replay
+// instead of re-hitting this route (and Supabase's sign API) every time —
+// kept safely under the signed URL's own TTL so a cached redirect never
+// points at an already-expired link.
+const REDIRECT_CACHE_HEADERS = { "Cache-Control": `private, max-age=${SIGNED_URL_TTL_SECONDS - 120}` };
 
 async function synthesizeDialogue(dialogue: DialogueLine[]) {
   const openai = createOpenAIClient();
@@ -75,7 +80,7 @@ export async function GET(
     .createSignedUrl(objectPath, SIGNED_URL_TTL_SECONDS);
 
   if (signed?.signedUrl) {
-    return NextResponse.redirect(signed.signedUrl);
+    return NextResponse.redirect(signed.signedUrl, { headers: REDIRECT_CACHE_HEADERS });
   }
 
   const buffer =
@@ -102,7 +107,7 @@ export async function GET(
     .createSignedUrl(objectPath, SIGNED_URL_TTL_SECONDS);
 
   if (freshSigned?.signedUrl) {
-    return NextResponse.redirect(freshSigned.signedUrl);
+    return NextResponse.redirect(freshSigned.signedUrl, { headers: REDIRECT_CACHE_HEADERS });
   }
 
   // Signing failed for some reason — fall back to serving the bytes we

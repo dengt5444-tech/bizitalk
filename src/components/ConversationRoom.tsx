@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
-import { Check, Lightbulb, Mic, MicOff, X } from "lucide-react";
+import { Check, Lightbulb, Loader2, Mic, MicOff, X } from "lucide-react";
 import type {
   ConversationFeedback,
   ConversationTurn,
@@ -343,12 +343,18 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
     });
   }
 
-  async function connectRealtime(id: string) {
-    const tokenRes = await fetch(`/api/conversation/sessions/${id}/realtime-token`, {
+  async function connectRealtime(id: string, micStreamPromise: Promise<MediaStream>) {
+    // Fetching the ephemeral token and waiting for the (already-in-flight,
+    // see handleStart) mic permission/device init used to happen one after
+    // the other — now they run concurrently, so total setup time is
+    // whichever of the two is slower, not their sum.
+    const tokenPromise = fetch(`/api/conversation/sessions/${id}/realtime-token`, {
       method: "POST",
+    }).then(async (res) => {
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error ?? "token_failed");
+      return data;
     });
-    const tokenData = await tokenRes.json();
-    if (!tokenRes.ok) throw new Error(tokenData?.error ?? "token_failed");
 
     const pc = new RTCPeerConnection();
     pcRef.current = pc;
@@ -361,14 +367,8 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
       }
     };
 
-    // Explicit (rather than relying on browser defaults) so the AI's own
-    // voice playing through the speakers is less likely to leak back into
-    // the mic and get misread by the server's turn detection as the
-    // learner speaking, which was another way the conversation could seem
-    // to take off on its own.
-    const micStream = await navigator.mediaDevices.getUserMedia({
-      audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
-    });
+    const [tokenData, micStream] = await Promise.all([tokenPromise, micStreamPromise]);
+
     micStreamRef.current = micStream;
     micStream.getTracks().forEach((track) => pc.addTrack(track, micStream));
 
@@ -486,6 +486,29 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
     setMode(chosenMode);
     clearHint();
     openingHandledRef.current = false;
+
+    // Requested immediately — in parallel with creating the session below —
+    // rather than only after the session exists. getUserMedia doesn't
+    // depend on the session at all, and the permission prompt (or just
+    // device init, even when already granted) is often the single slowest
+    // step in starting a voice call, so overlapping it with the network
+    // round trip instead of paying for both back-to-back noticeably cuts
+    // the wait before the learner can actually start talking. A no-op
+    // .catch() here only silences the "unhandled rejection" console warning
+    // that a denied/failed permission would otherwise log before
+    // connectRealtime gets a chance to await (and properly handle) it below.
+    const micStreamPromise: Promise<MediaStream> | null =
+      chosenMode === "realtime"
+        ? navigator.mediaDevices.getUserMedia({
+            // Explicit (rather than relying on browser defaults) so the
+            // AI's own voice playing through the speakers is less likely to
+            // leak back into the mic and get misread by the server's turn
+            // detection as the learner speaking.
+            audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+          })
+        : null;
+    micStreamPromise?.catch(() => {});
+
     try {
       const res = await fetch("/api/conversation/sessions", {
         method: "POST",
@@ -508,18 +531,18 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
       if (chosenMode === "realtime") {
         setPhase("connecting");
         try {
-          await connectRealtime(data.sessionId);
+          await connectRealtime(data.sessionId, micStreamPromise!);
           setPhase("chatting");
         } catch {
           closeRealtimeConnection();
           setMode("text");
           setError("リアルタイム音声に接続できなかったため、テキストモードで開始します。");
           setPhase("chatting");
-          if (autoPlay) setTimeout(() => playAudio(0), 150);
+          if (autoPlay) playAudio(0);
         }
       } else {
         setPhase("chatting");
-        if (autoPlay) setTimeout(() => playAudio(0), 150);
+        if (autoPlay) playAudio(0);
       }
     } catch (err) {
       const code = err instanceof Error ? err.message : "";
@@ -574,7 +597,7 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
       setTurnCount(data.turnCount);
       fetchHint(next);
       if (autoPlay) {
-        setTimeout(() => playAudio(data.assistantIndex), 150);
+        playAudio(data.assistantIndex);
       }
     } catch {
       setError("メッセージを送信できませんでした。もう一度お試しください。");
@@ -985,10 +1008,16 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
             type="button"
             onClick={handleEnd}
             disabled={ending || turnCount < 1}
-            aria-label="会話を終える"
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-ink text-paper transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+            aria-label={ending ? "フィードバックを作成中..." : "会話を終える"}
+            className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-ink text-paper transition hover:opacity-90 disabled:cursor-not-allowed ${
+              ending ? "opacity-90" : "disabled:opacity-40"
+            }`}
           >
-            <X size={19} strokeWidth={2} />
+            {ending ? (
+              <Loader2 size={19} strokeWidth={2} className="animate-spin" />
+            ) : (
+              <X size={19} strokeWidth={2} />
+            )}
           </button>
         </div>
       </div>
