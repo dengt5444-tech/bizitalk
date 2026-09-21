@@ -1,8 +1,14 @@
 import { NextResponse } from "next/server";
 import * as Sentry from "@sentry/nextjs";
-import { createClient } from "@/lib/supabase/server";
+import { getAuthedClient } from "@/lib/supabase/api";
 import { createStripeClient } from "@/lib/stripe";
 import { resolveReferralCode } from "@/lib/referrals";
+
+// The mobile app has no page to redirect back to, so it asks for this
+// custom-scheme URL instead of a site path; expo-web-browser's auth
+// session watches for it and closes the in-app browser once Stripe
+// redirects here.
+const MOBILE_RETURN_SCHEME = "bizitalk://checkout";
 
 // Four Stripe prices under two entitlement tables: the standalone
 // "listening" plan writes to gakuto_subscriptions (shared with Bijirisu),
@@ -35,10 +41,7 @@ function successPathForPlan(plan: CheckoutPlan) {
 const VALID_PLANS: CheckoutPlan[] = ["listening", "trial", "standard", "unlimited"];
 
 export async function POST(request: Request) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { user } = await getAuthedClient();
 
   if (!user || !user.email) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
@@ -77,6 +80,7 @@ export async function POST(request: Request) {
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
   const stripe = createStripeClient();
+  const fromMobile = body?.mobileReturn === true;
 
   let session;
   try {
@@ -92,8 +96,12 @@ export async function POST(request: Request) {
           ...(referral ? { referral_code: referral.code } : {}),
         },
       },
-      success_url: `${siteUrl}${successPathForPlan(plan)}?checkout=success`,
-      cancel_url: `${siteUrl}/pricing?checkout=cancelled`,
+      success_url: fromMobile
+        ? `${MOBILE_RETURN_SCHEME}?status=success`
+        : `${siteUrl}${successPathForPlan(plan)}?checkout=success`,
+      cancel_url: fromMobile
+        ? `${MOBILE_RETURN_SCHEME}?status=cancelled`
+        : `${siteUrl}/pricing?checkout=cancelled`,
     });
   } catch (err) {
     // Surfaced fully in server logs (e.g. a price ID from the wrong Stripe

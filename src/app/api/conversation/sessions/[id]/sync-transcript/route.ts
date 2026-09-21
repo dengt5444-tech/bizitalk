@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { getAuthedClient } from "@/lib/supabase/api";
 import type { ConversationTurn } from "@/lib/conversation";
 
 // The real-time voice mode talks to OpenAI directly over WebRTC, bypassing
@@ -10,10 +10,7 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { supabase, user } = await getAuthedClient();
 
   if (!user) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });

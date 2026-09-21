@@ -19,6 +19,15 @@ export function Footer() {
             <Link href="/conversation" className="transition hover:text-ink">
               会話練習
             </Link>
+            <Link href="/materials" className="transition hover:text-ink">
+              リスニング
+            </Link>
+            <Link href="/vocabulary" className="transition hover:text-ink">
+              単語帳
+            </Link>
+            <Link href="/review" className="transition hover:text-ink">
+              復習
+            </Link>
             <Link href="/pricing" className="transition hover:text-ink">
               料金プラン
             </Link>

@@ -70,7 +70,7 @@ npm run dev
 
 ### 初回セットアップ
 
-1. Supabaseプロジェクトを作成し、SQL Editorで `supabase/migrations/0001_init.sql` → `0002_vocab_decks.sql` → `0003_conversation_minutes.sql` → `0004_free_talk.sql` → `0005_referrals.sql` → `0006_influencer_referrals.sql` → `0007_waitlist.sql` の順に実行
+1. Supabaseプロジェクトを作成し、SQL Editorで `supabase/migrations/0001_init.sql` → `0002_vocab_decks.sql` → `0003_conversation_minutes.sql` → `0004_free_talk.sql` → `0005_referrals.sql` → `0006_influencer_referrals.sql` → `0007_waitlist.sql` → `0008_iap_entitlements.sql` の順に実行
 2. 以下のスクリプトを実行(`NEXT_PUBLIC_SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` を環境変数として読み込みます)
 
 ```bash
