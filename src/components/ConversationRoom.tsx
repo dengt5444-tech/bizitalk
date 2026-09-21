@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import * as Sentry from "@sentry/nextjs";
 import Link from "next/link";
 import { Check, Lightbulb, Loader2, Mic, MicOff, Play, X } from "lucide-react";
 import type {
@@ -236,6 +237,21 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
   // implausibly short blips instead of trusting the transcript blindly.
   const lastSpeechStartedAtRef = useRef<number | null>(null);
   const lastSpeechDurationMsRef = useRef(0);
+  // Disabling the mic track while the AI speaks (syncMicEnabled) isn't
+  // instantaneous — there's an unavoidable gap between the server deciding
+  // to start a new response and this client receiving that event and
+  // actually flipping the track off, during which the still-live mic can
+  // still pick up the very first instant of the AI's own new utterance.
+  // That fragment has nothing to compare against yet in looksLikeSelfEcho
+  // (the assistant turn it's an echo OF hasn't finished — and so hasn't
+  // been recorded — at the time it's being said), so it can slip past both
+  // the duration and echo checks and get treated as a genuine reply,
+  // firing a second response.create while the first response is still
+  // actively generating and cutting it off. Recording whether the AI was
+  // already speaking the instant this speech began closes that gap: it
+  // doesn't need to resemble anything to be rejected, the timing alone is
+  // disqualifying.
+  const speechOverlappedAssistantRef = useRef(false);
   // The session is created with a seeded opening-line message already shown
   // on screen (so it renders instantly, without waiting on the model). The
   // realtime API is then asked to actually speak that same line; this flag
@@ -480,6 +496,7 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
         case "input_audio_buffer.speech_started":
           setUserSpeaking(true);
           lastSpeechStartedAtRef.current = Date.now();
+          speechOverlappedAssistantRef.current = assistantSpeakingRef.current;
           // No barge-in cancel here anymore — the mic is already disabled
           // for the entire time the AI is speaking (see syncMicEnabled),
           // so this event should never fire during a genuine AI turn in
@@ -533,12 +550,43 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
           const lastAssistantTurn = [...transcriptRef.current]
             .reverse()
             .find((turn) => turn.role === "assistant");
-          const rejected =
-            !candidate ||
-            lastSpeechDurationMsRef.current < MIN_SPEECH_DURATION_MS ||
-            (lastAssistantTurn && looksLikeSelfEcho(candidate, lastAssistantTurn.text));
+          const isEcho = !!(lastAssistantTurn && looksLikeSelfEcho(candidate, lastAssistantTurn.text));
+          // Recorded for Sentry only — which of these actually fires in
+          // practice is exactly the visibility this bug class has been
+          // missing; guessing blind at the cause without it hasn't worked.
+          const rejectReason = !candidate
+            ? "empty"
+            : lastSpeechDurationMsRef.current < MIN_SPEECH_DURATION_MS
+              ? "too_short"
+              : isEcho
+                ? "self_echo"
+                : speechOverlappedAssistantRef.current
+                  ? "overlapped_assistant_start"
+                  : assistantSpeakingRef.current
+                    ? "assistant_still_speaking"
+                    : null;
+          const rejected = rejectReason !== null;
 
           if (rejected) {
+            Sentry.addBreadcrumb({
+              category: "realtime-voice",
+              message: "rejected transcript",
+              level: "info",
+              data: { reason: rejectReason, durationMs: lastSpeechDurationMsRef.current },
+            });
+            if (rejectReason === "overlapped_assistant_start" || rejectReason === "assistant_still_speaking") {
+              // This is the exact race this fix targets — the mic picking
+              // up a fragment of the AI's own new turn before the mic-mute
+              // catches up, which used to slip through and fire a second
+              // response.create that cut the AI off mid-sentence. A real
+              // captured event so it's possible to confirm from Sentry
+              // whether that's still happening, not just guess from a
+              // learner's description again.
+              Sentry.captureMessage("realtime voice: rejected transcript overlapped assistant turn", {
+                level: "warning",
+                extra: { reason: rejectReason, candidate, durationMs: lastSpeechDurationMsRef.current },
+              });
+            }
             // The audio was still committed to the model's own conversation
             // history as an input item the instant speech_stopped fired,
             // before this transcript (and thus this rejection) was even
@@ -558,6 +606,11 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
           }
 
           appendRealtimeTurn("user", candidate, msg.item_id);
+          Sentry.addBreadcrumb({
+            category: "realtime-voice",
+            message: "response.create (validated user turn)",
+            level: "info",
+          });
           try {
             dcRef.current?.send(JSON.stringify({ type: "response.create" }));
           } catch {
@@ -596,7 +649,21 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
     };
 
     pc.oniceconnectionstatechange = () => {
+      Sentry.addBreadcrumb({
+        category: "realtime-voice",
+        message: "ice connection state change",
+        level: "info",
+        data: { state: pc.iceConnectionState, assistantSpeaking: assistantSpeakingRef.current },
+      });
       if (pc.iceConnectionState === "failed" || pc.iceConnectionState === "disconnected") {
+        // A real captured event, not just a breadcrumb — this and the
+        // "AI stopped speaking" reports have been hard to tell apart from
+        // the learner's side, so this needs to actually show up in Sentry
+        // on its own rather than only riding along with some later error.
+        Sentry.captureMessage("realtime voice: ICE connection unstable", {
+          level: "warning",
+          extra: { state: pc.iceConnectionState, assistantSpeaking: assistantSpeakingRef.current },
+        });
         setError("音声接続が不安定になりました。テキストで会話を続けられます。");
       }
     };
@@ -699,6 +766,14 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
   async function handleSend() {
     const text = inputText.trim();
     if (!text || !sessionId || sending || turnLimitReached) return;
+    // In voice mode, this is the type-instead-of-speak fallback — typing a
+    // message while the AI is still talking would send a second
+    // response.create while the first is still actively generating and
+    // cut it off (see speechOverlappedAssistantRef above for the same
+    // failure mode via the mic instead of the keyboard). The input is
+    // already disabled while assistantSpeaking for this same reason; this
+    // is a second guard against enqueued send() calls beating that.
+    if (mode === "realtime" && assistantSpeakingRef.current) return;
 
     setInputText("");
     setError(null);
@@ -1176,7 +1251,7 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
                 handleSend();
               }
             }}
-            disabled={turnLimitReached}
+            disabled={turnLimitReached || assistantSpeaking}
             placeholder="マイクで話すか、代わりにここに入力できます"
             className="h-11 flex-1 rounded-full border border-line bg-surface px-4 text-sm text-ink outline-none focus:border-signal disabled:cursor-not-allowed disabled:opacity-60"
           />
