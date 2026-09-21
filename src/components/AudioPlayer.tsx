@@ -4,7 +4,7 @@ export function AudioPlayer({ materialId }: { materialId: string }) {
   return (
     <audio
       controls
-      preload="none"
+      preload="metadata"
       className="w-full accent-signal"
       src={`/api/materials/${materialId}/audio`}
     >

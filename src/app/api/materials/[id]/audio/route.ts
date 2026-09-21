@@ -10,6 +10,7 @@ import type { DialogueLine } from "@/lib/materials";
 // audio already generated and cached there is reused instead of
 // re-synthesized.
 const AUDIO_BUCKET = "gakuto-audio";
+const SIGNED_URL_TTL_SECONDS = 60 * 30;
 
 async function synthesizeDialogue(dialogue: DialogueLine[]) {
   const openai = createOpenAIClient();
@@ -64,19 +65,17 @@ export async function GET(
     .slice(0, 16);
   const objectPath = `${material.id}-${contentHash}.mp3`;
 
-  const { data: cached } = await admin.storage
+  // Redirecting to a short-lived signed URL lets the browser stream
+  // straight from Supabase's storage CDN (with Range-request/seek support)
+  // instead of this route downloading the whole file into memory first and
+  // re-sending it — that extra hop was the main source of playback lag on
+  // every cached (i.e. near-every) request.
+  const { data: signed } = await admin.storage
     .from(AUDIO_BUCKET)
-    .download(objectPath);
+    .createSignedUrl(objectPath, SIGNED_URL_TTL_SECONDS);
 
-  if (cached) {
-    const buffer = Buffer.from(await cached.arrayBuffer());
-    return new NextResponse(buffer, {
-      headers: {
-        "Content-Type": "audio/mpeg",
-        "Cache-Control": "private, max-age=31536000, immutable",
-        "X-Audio-Source": "cache",
-      },
-    });
+  if (signed?.signedUrl) {
+    return NextResponse.redirect(signed.signedUrl);
   }
 
   const buffer =
@@ -98,6 +97,16 @@ export async function GET(
     upsert: true,
   });
 
+  const { data: freshSigned } = await admin.storage
+    .from(AUDIO_BUCKET)
+    .createSignedUrl(objectPath, SIGNED_URL_TTL_SECONDS);
+
+  if (freshSigned?.signedUrl) {
+    return NextResponse.redirect(freshSigned.signedUrl);
+  }
+
+  // Signing failed for some reason — fall back to serving the bytes we
+  // already have in hand rather than erroring out.
   return new NextResponse(buffer, {
     headers: {
       "Content-Type": "audio/mpeg",

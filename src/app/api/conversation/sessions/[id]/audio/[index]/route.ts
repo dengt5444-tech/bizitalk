@@ -5,6 +5,7 @@ import { createOpenAIClient, TTS_MODEL } from "@/lib/openai";
 import type { ConversationTurn } from "@/lib/conversation";
 
 const AUDIO_BUCKET = "bizitalk-audio";
+const SIGNED_URL_TTL_SECONDS = 60 * 30;
 
 export async function GET(
   _request: Request,
@@ -44,19 +45,16 @@ export async function GET(
   const admin = createAdminClient();
   const objectPath = `conversation/${session.id}-${turnIndex}.mp3`;
 
-  const { data: cached } = await admin.storage
+  // See materials/[id]/audio/route.ts for why this redirects to a signed
+  // URL instead of downloading + re-serving the file itself: streaming
+  // straight from Supabase's storage CDN removes an extra full-buffer hop
+  // through this server on every (near-always cached) request.
+  const { data: signed } = await admin.storage
     .from(AUDIO_BUCKET)
-    .download(objectPath);
+    .createSignedUrl(objectPath, SIGNED_URL_TTL_SECONDS);
 
-  if (cached) {
-    const buffer = Buffer.from(await cached.arrayBuffer());
-    return new NextResponse(buffer, {
-      headers: {
-        "Content-Type": "audio/mpeg",
-        "Cache-Control": "private, max-age=31536000, immutable",
-        "X-Audio-Source": "cache",
-      },
-    });
+  if (signed?.signedUrl) {
+    return NextResponse.redirect(signed.signedUrl);
   }
 
   const openai = createOpenAIClient();
@@ -72,6 +70,14 @@ export async function GET(
     contentType: "audio/mpeg",
     upsert: true,
   });
+
+  const { data: freshSigned } = await admin.storage
+    .from(AUDIO_BUCKET)
+    .createSignedUrl(objectPath, SIGNED_URL_TTL_SECONDS);
+
+  if (freshSigned?.signedUrl) {
+    return NextResponse.redirect(freshSigned.signedUrl);
+  }
 
   return new NextResponse(buffer, {
     headers: {

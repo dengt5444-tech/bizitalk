@@ -143,6 +143,12 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
   const [hint, setHint] = useState<Hint | null>(null);
   const [hintLoading, setHintLoading] = useState(false);
   const guidedModeRef = useRef(false);
+  // Bumped on every fetchHint call (and whenever the hint is cleared), so a
+  // slow response that resolves after the learner already replied — or
+  // after a newer hint request superseded it — can tell it's stale and
+  // discard itself instead of popping up a suggestion for a turn that has
+  // already passed.
+  const hintRequestIdRef = useRef(0);
 
   useEffect(() => {
     guidedModeRef.current = guidedMode;
@@ -166,6 +172,14 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
   const pcRef = useRef<RTCPeerConnection | null>(null);
   const dcRef = useRef<RTCDataChannel | null>(null);
   const micStreamRef = useRef<MediaStream | null>(null);
+  // Whether the model currently has an in-flight spoken response. Used to
+  // implement barge-in: without this, when the learner starts talking over
+  // the AI, nothing tells the model to stop — it keeps generating (and once
+  // done, the server's turn detection immediately starts yet another
+  // response to the learner's speech), so the conversation just plows
+  // forward on its own instead of actually listening. A ref, not state,
+  // since dc.onmessage needs to read it synchronously as events arrive.
+  const responseActiveRef = useRef(false);
   // The session is created with a seeded opening-line message already shown
   // on screen (so it renders instantly, without waiting on the model). The
   // realtime API is then asked to actually speak that same line; this flag
@@ -231,6 +245,7 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
   async function fetchHint(transcript: ConversationTurn[]) {
     const id = sessionIdRef.current;
     if (!id || !guidedModeRef.current) return;
+    const requestId = ++hintRequestIdRef.current;
     setHintLoading(true);
     try {
       const res = await fetch(`/api/conversation/sessions/${id}/hint`, {
@@ -240,13 +255,25 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error ?? "hint_failed");
+      // The learner may have already spoken again (or guided mode may have
+      // been turned off) by the time this resolves — a newer request or an
+      // explicit clear bumps the id, so an outdated response like this one
+      // is dropped instead of popping up a suggestion for a turn that's
+      // already over.
+      if (requestId !== hintRequestIdRef.current) return;
       setHint({ reply: data.reply, gloss: data.gloss });
     } catch {
       // Silent — the hint card just stays empty/previous; guided mode is a
       // convenience, not something worth interrupting the conversation for.
     } finally {
-      setHintLoading(false);
+      if (requestId === hintRequestIdRef.current) setHintLoading(false);
     }
+  }
+
+  function clearHint() {
+    hintRequestIdRef.current += 1;
+    clearHint();
+    setHintLoading(false);
   }
 
   function appendRealtimeTurn(role: "user" | "assistant", text: string, itemId?: string) {
@@ -276,7 +303,7 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
     setTurnCount(nextTurnCount);
     syncTranscript(next, nextTurnCount);
     if (role === "user") {
-      setHint(null);
+      clearHint();
     } else {
       fetchHint(next);
     }
@@ -334,7 +361,14 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
       }
     };
 
-    const micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    // Explicit (rather than relying on browser defaults) so the AI's own
+    // voice playing through the speakers is less likely to leak back into
+    // the mic and get misread by the server's turn detection as the
+    // learner speaking, which was another way the conversation could seem
+    // to take off on its own.
+    const micStream = await navigator.mediaDevices.getUserMedia({
+      audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+    });
     micStreamRef.current = micStream;
     micStream.getTracks().forEach((track) => pc.addTrack(track, micStream));
 
@@ -352,9 +386,26 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
       switch (msg.type) {
         case "input_audio_buffer.speech_started":
           setUserSpeaking(true);
+          // Barge-in: the learner started talking while the AI still has a
+          // response in flight. Cancel it immediately instead of letting it
+          // run to completion and then auto-starting yet another turn —
+          // that pile-up is what makes the conversation feel like it's
+          // running away on its own.
+          if (responseActiveRef.current) {
+            responseActiveRef.current = false;
+            setAssistantSpeaking(false);
+            try {
+              dcRef.current?.send(JSON.stringify({ type: "response.cancel" }));
+            } catch {
+              // ignore — worst case the current response finishes normally
+            }
+          }
           break;
         case "input_audio_buffer.speech_stopped":
           setUserSpeaking(false);
+          break;
+        case "response.created":
+          responseActiveRef.current = true;
           break;
         case "response.output_audio_transcript.delta":
         case "response.audio_transcript.delta":
@@ -366,6 +417,9 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
           if (typeof msg.transcript === "string") {
             appendRealtimeTurn("assistant", msg.transcript.trim(), msg.item_id);
           }
+          break;
+        case "response.done":
+          responseActiveRef.current = false;
           break;
         case "conversation.item.input_audio_transcription.completed":
           if (typeof msg.transcript === "string") {
@@ -430,7 +484,7 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
     setStarting(true);
     setError(null);
     setMode(chosenMode);
-    setHint(null);
+    clearHint();
     openingHandledRef.current = false;
     try {
       const res = await fetch("/api/conversation/sessions", {
@@ -486,7 +540,7 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
 
     setInputText("");
     setError(null);
-    setHint(null);
+    clearHint();
 
     if (mode === "realtime" && dcRef.current?.readyState === "open") {
       pushTurn({ role: "user", text });
@@ -602,7 +656,7 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
     setFeedback(null);
     setError(null);
     setMicMuted(false);
-    setHint(null);
+    clearHint();
   }
 
   const showVoiceScreen = mode === "realtime" && (phase === "connecting" || phase === "chatting");
