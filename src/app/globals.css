@@ -87,3 +87,20 @@ body {
   text-underline-offset: 3px;
   text-decoration-color: var(--color-signal);
 }
+
+/* Realtime voice call's ambient orb (ConversationRoom.tsx) — a soft glow
+   ring plus a gradient core, each breathing independently, mirroring the
+   mobile app's VoiceOrb component. */
+@keyframes orb-glow {
+  0%, 100% { opacity: 0.18; transform: scale(0.95); }
+  50% { opacity: 0.4; transform: scale(1.08); }
+}
+@keyframes orb-scale {
+  0%, 100% { transform: scale(0.95); }
+  50% { transform: scale(1.06); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .orb-glow, .orb-core {
+    animation: none !important;
+  }
+}

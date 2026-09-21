@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
+import { Check, Lightbulb, Mic, MicOff, X } from "lucide-react";
 import type {
   ConversationFeedback,
   ConversationTurn,
@@ -13,6 +14,8 @@ import {
 } from "@/lib/conversation";
 import { Avatar } from "@/components/Avatar";
 import { FeedbackPanel } from "@/components/FeedbackPanel";
+import { HintCard } from "@/components/conversation/HintCard";
+import { VoiceOrb, type OrbState } from "@/components/conversation/VoiceOrb";
 
 type ScenarioInfo = {
   slug: string;
@@ -24,6 +27,7 @@ type ScenarioInfo = {
 
 type Phase = "idle" | "connecting" | "chatting" | "ended";
 type Mode = "realtime" | "text";
+type Hint = { reply: string; gloss: string };
 
 interface SpeechRecognitionAlternative {
   transcript: string;
@@ -132,6 +136,18 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
   const [error, setError] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<ConversationFeedback | null>(null);
 
+  // "Guided mode": after each of the AI's turns, offer a concrete example
+  // of what the learner could say back — chosen on the start screen,
+  // works in both realtime voice and text mode.
+  const [guidedMode, setGuidedMode] = useState(false);
+  const [hint, setHint] = useState<Hint | null>(null);
+  const [hintLoading, setHintLoading] = useState(false);
+  const guidedModeRef = useRef(false);
+
+  useEffect(() => {
+    guidedModeRef.current = guidedMode;
+  }, [guidedMode]);
+
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
   const speechSupported = useSyncExternalStore(
@@ -142,6 +158,11 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
 
   const transcriptRef = useRef<ConversationTurn[]>([]);
   const processedIdsRef = useRef<Set<string>>(new Set());
+  // dc.onmessage below is assigned once per WebRTC connection, inside a
+  // closure rooted at the render that called handleStart — it never sees
+  // later setSessionId() updates, so anything it needs (syncTranscript,
+  // fetchHint) must read this ref instead of the sessionId state variable.
+  const sessionIdRef = useRef<string | null>(null);
   const pcRef = useRef<RTCPeerConnection | null>(null);
   const dcRef = useRef<RTCDataChannel | null>(null);
   const micStreamRef = useRef<MediaStream | null>(null);
@@ -196,14 +217,36 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
   }
 
   function syncTranscript(transcript: ConversationTurn[], nextTurnCount: number) {
-    if (!sessionId) return Promise.resolve();
-    return fetch(`/api/conversation/sessions/${sessionId}/sync-transcript`, {
+    const id = sessionIdRef.current;
+    if (!id) return Promise.resolve();
+    return fetch(`/api/conversation/sessions/${id}/sync-transcript`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ transcript, turnCount: nextTurnCount }),
     }).catch(() => {
       // Best-effort background sync; the next successful sync will catch up.
     });
+  }
+
+  async function fetchHint(transcript: ConversationTurn[]) {
+    const id = sessionIdRef.current;
+    if (!id || !guidedModeRef.current) return;
+    setHintLoading(true);
+    try {
+      const res = await fetch(`/api/conversation/sessions/${id}/hint`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ transcript }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error ?? "hint_failed");
+      setHint({ reply: data.reply, gloss: data.gloss });
+    } catch {
+      // Silent — the hint card just stays empty/previous; guided mode is a
+      // convenience, not something worth interrupting the conversation for.
+    } finally {
+      setHintLoading(false);
+    }
   }
 
   function appendRealtimeTurn(role: "user" | "assistant", text: string, itemId?: string) {
@@ -232,6 +275,11 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
     );
     setTurnCount(nextTurnCount);
     syncTranscript(next, nextTurnCount);
+    if (role === "user") {
+      setHint(null);
+    } else {
+      fetchHint(next);
+    }
     if (nextTurnCount >= MAX_TURNS_PER_SESSION) {
       muteMic();
       try {
@@ -382,6 +430,7 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
     setStarting(true);
     setError(null);
     setMode(chosenMode);
+    setHint(null);
     openingHandledRef.current = false;
     try {
       const res = await fetch("/api/conversation/sessions", {
@@ -396,9 +445,11 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
       if (!res.ok) throw new Error(data?.error ?? "start_failed");
 
       setSessionId(data.sessionId);
+      sessionIdRef.current = data.sessionId;
       transcriptRef.current = data.transcript;
       setMessages(data.transcript);
       setTurnCount(0);
+      fetchHint(data.transcript);
 
       if (chosenMode === "realtime") {
         setPhase("connecting");
@@ -435,6 +486,7 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
 
     setInputText("");
     setError(null);
+    setHint(null);
 
     if (mode === "realtime" && dcRef.current?.readyState === "open") {
       pushTurn({ role: "user", text });
@@ -464,8 +516,9 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error ?? "send_failed");
 
-      pushTurn({ role: "assistant", text: data.reply });
+      const next = pushTurn({ role: "assistant", text: data.reply });
       setTurnCount(data.turnCount);
+      fetchHint(next);
       if (autoPlay) {
         setTimeout(() => playAudio(data.assistantIndex), 150);
       }
@@ -540,6 +593,7 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
     processedIdsRef.current = new Set();
     openingHandledRef.current = false;
     transcriptRef.current = [];
+    sessionIdRef.current = null;
     setPhase("idle");
     setMode(null);
     setSessionId(null);
@@ -548,9 +602,25 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
     setFeedback(null);
     setError(null);
     setMicMuted(false);
+    setHint(null);
   }
 
+  const showVoiceScreen = mode === "realtime" && (phase === "connecting" || phase === "chatting");
+  const latestTurn = messages[messages.length - 1];
+  const orbState: OrbState = turnLimitReached
+    ? "muted"
+    : phase === "connecting"
+      ? "connecting"
+      : micMuted
+        ? "muted"
+        : assistantSpeaking
+          ? "assistant"
+          : userSpeaking
+            ? "user"
+            : "idle";
+
   return (
+    <>
     <div className="rounded-2xl border border-line bg-surface">
       <audio ref={audioRef} autoPlay className="hidden" />
 
@@ -583,6 +653,25 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
                 className="mt-1.5 w-full resize-none rounded-xl border border-line bg-paper px-3.5 py-2.5 text-sm text-ink placeholder:text-ink-faint focus:border-signal focus:outline-none disabled:cursor-not-allowed disabled:opacity-60"
               />
             </div>
+          )}
+          <button
+            type="button"
+            onClick={() => setGuidedMode((v) => !v)}
+            aria-pressed={guidedMode}
+            className={`mx-auto mt-5 flex max-w-sm items-center justify-center gap-2 rounded-full border px-5 py-2.5 text-sm font-medium transition ${
+              guidedMode
+                ? "border-signal bg-signal-tint text-signal-dim"
+                : "border-line text-ink-soft hover:text-ink"
+            }`}
+          >
+            <Lightbulb size={16} strokeWidth={2} />
+            ガイド付きで練習する
+            {guidedMode && <Check size={15} strokeWidth={2.5} />}
+          </button>
+          {guidedMode && (
+            <p className="mx-auto mt-2 max-w-sm text-xs text-ink-faint">
+              相手が話すたびに「こう言ってみましょう」という返答例が表示されます。
+            </p>
           )}
           <div className="mt-6 flex flex-col items-center gap-3">
             {supportsRealtime && (
@@ -621,41 +710,21 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
         </div>
       )}
 
-      {phase === "connecting" && (
-        <div className="p-6 text-center sm:p-8">
-          <Avatar name={scenario.personaName} size="lg" className="mx-auto animate-pulse" />
-          <p className="mt-4 text-sm font-medium text-signal">
-            {scenario.personaName}さんに接続しています...
-          </p>
-          <p className="mt-2 text-xs text-ink-faint">
-            マイクの使用を許可してください。
-          </p>
-        </div>
-      )}
-
-      {phase === "chatting" && (
+      {phase === "chatting" && mode === "text" && (
         <div className="flex flex-col">
           <div className="flex items-center justify-between border-b border-line-soft px-5 py-3">
             <p className="text-xs font-medium text-ink-faint">
               ターン {turnCount} / {MAX_TURNS_PER_SESSION}
-              {mode === "realtime" && assistantSpeaking && (
-                <span className="ml-2 text-signal">話しています...</span>
-              )}
-              {mode === "realtime" && userSpeaking && (
-                <span className="ml-2 text-amber">聞いています...</span>
-              )}
             </p>
-            {mode === "text" && (
-              <label className="flex items-center gap-1.5 text-xs text-ink-faint">
-                <input
-                  type="checkbox"
-                  checked={autoPlay}
-                  onChange={(e) => setAutoPlay(e.target.checked)}
-                  className="rounded accent-signal"
-                />
-                音声を自動再生
-              </label>
-            )}
+            <label className="flex items-center gap-1.5 text-xs text-ink-faint">
+              <input
+                type="checkbox"
+                checked={autoPlay}
+                onChange={(e) => setAutoPlay(e.target.checked)}
+                className="rounded accent-signal"
+              />
+              音声を自動再生
+            </label>
           </div>
 
           <div className="max-h-[28rem] space-y-3 overflow-y-auto px-5 py-5">
@@ -676,7 +745,7 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
                 >
                   {message.text}
                 </div>
-                {message.role === "assistant" && mode === "text" && (
+                {message.role === "assistant" && (
                   <button
                     type="button"
                     onClick={() => playAudio(index)}
@@ -690,6 +759,12 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
             ))}
           </div>
 
+          {guidedMode && (hint || hintLoading) && (
+            <div className="px-5 pb-4">
+              <HintCard reply={hint?.reply ?? null} gloss={hint?.gloss ?? null} loading={hintLoading} onRefresh={() => fetchHint(transcriptRef.current)} />
+            </div>
+          )}
+
           {turnLimitReached && (
             <p className="px-5 text-sm font-medium text-signal">
               このセッションの会話上限に達しました。下のボタンでフィードバックを見てみましょう。
@@ -699,22 +774,7 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
 
           <div className="border-t border-line-soft p-4">
             <div className="flex items-end gap-2">
-              {mode === "realtime" && (
-                <button
-                  type="button"
-                  onClick={handleMicMuteToggle}
-                  disabled={turnLimitReached}
-                  aria-label={micMuted ? "マイクのミュートを解除" : "マイクをミュート"}
-                  className={`shrink-0 rounded-full px-3.5 py-3 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-40 ${
-                    micMuted
-                      ? "bg-rose-tint text-rose"
-                      : "bg-paper-dim text-ink-soft hover:text-ink"
-                  }`}
-                >
-                  {micMuted ? "ミュート中" : "話す"}
-                </button>
-              )}
-              {mode === "text" && speechSupported && (
+              {speechSupported && (
                 <button
                   type="button"
                   onClick={handleMicToggle}
@@ -740,11 +800,9 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
                 }}
                 disabled={turnLimitReached}
                 placeholder={
-                  mode === "realtime"
-                    ? "マイクで話すか、代わりにここに入力できます"
-                    : speechSupported
-                      ? "英語で入力するか、マイクで話してください"
-                      : "英語で入力してください"
+                  speechSupported
+                    ? "英語で入力するか、マイクで話してください"
+                    : "英語で入力してください"
                 }
                 rows={1}
                 className="min-h-[2.75rem] flex-1 resize-none rounded-xl border border-line bg-paper px-4 py-2.5 text-sm text-ink outline-none focus:border-signal disabled:cursor-not-allowed disabled:opacity-60"
@@ -793,5 +851,94 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
         </div>
       )}
     </div>
+
+    {showVoiceScreen && (
+      <div className="fixed inset-0 z-50 flex flex-col bg-paper">
+        <div className="flex items-center justify-between px-5 pt-5 sm:px-8 sm:pt-8">
+          <div className="flex items-center gap-3">
+            <Avatar name={scenario.personaName} size="sm" />
+            <div>
+              <p className="font-display text-sm font-semibold text-ink">{scenario.personaName}</p>
+              <p className="text-xs text-ink-faint">
+                ターン {turnCount} / {MAX_TURNS_PER_SESSION}
+              </p>
+            </div>
+          </div>
+          {guidedMode && (
+            <span className="flex items-center gap-1.5 rounded-full bg-signal-tint px-3 py-1.5 text-xs font-medium text-signal-dim">
+              <Lightbulb size={13} strokeWidth={2} />
+              ガイド付き
+            </span>
+          )}
+        </div>
+
+        <div className="flex flex-1 flex-col items-center justify-center gap-7 px-6">
+          <VoiceOrb state={orbState} />
+          {phase === "connecting" ? (
+            <p className="text-sm font-medium text-signal">
+              {scenario.personaName}さんに接続しています...
+            </p>
+          ) : (
+            latestTurn && (
+              <div className="max-w-md text-center">
+                <p className="text-xs font-medium tracking-wide text-ink-faint uppercase">
+                  {latestTurn.role === "assistant" ? scenario.personaName : "あなた"}
+                </p>
+                <p className="mt-1.5 text-lg font-medium text-ink">{latestTurn.text}</p>
+              </div>
+            )
+          )}
+        </div>
+
+        <div className="mx-auto w-full max-w-md space-y-3 px-5 sm:px-8">
+          {guidedMode && phase === "chatting" && (hint || hintLoading) && (
+            <HintCard reply={hint?.reply ?? null} gloss={hint?.gloss ?? null} loading={hintLoading} onRefresh={() => fetchHint(transcriptRef.current)} />
+          )}
+          {turnLimitReached && (
+            <p className="text-center text-sm font-medium text-signal">
+              このセッションの会話上限に達しました。下のボタンでフィードバックを見てみましょう。
+            </p>
+          )}
+          {error && <p className="text-center text-sm text-rose">{error}</p>}
+        </div>
+
+        <div className="mx-auto flex w-full max-w-md items-center gap-2.5 px-5 py-5 sm:px-8 sm:pb-8">
+          <input
+            value={inputText}
+            onChange={(e) => setInputText(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                handleSend();
+              }
+            }}
+            disabled={turnLimitReached}
+            placeholder="マイクで話すか、代わりにここに入力できます"
+            className="h-11 flex-1 rounded-full border border-line bg-surface px-4 text-sm text-ink outline-none focus:border-signal disabled:cursor-not-allowed disabled:opacity-60"
+          />
+          <button
+            type="button"
+            onClick={handleMicMuteToggle}
+            disabled={turnLimitReached || phase !== "chatting"}
+            aria-label={micMuted ? "マイクのミュートを解除" : "マイクをミュート"}
+            className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition disabled:cursor-not-allowed disabled:opacity-40 ${
+              micMuted ? "bg-rose-tint text-rose" : "bg-paper-dim text-ink-soft hover:text-ink"
+            }`}
+          >
+            {micMuted ? <MicOff size={19} strokeWidth={2} /> : <Mic size={19} strokeWidth={2} />}
+          </button>
+          <button
+            type="button"
+            onClick={handleEnd}
+            disabled={ending || turnCount < 1}
+            aria-label="会話を終える"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-ink text-paper transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            <X size={19} strokeWidth={2} />
+          </button>
+        </div>
+      </div>
+    )}
+    </>
   );
 }
