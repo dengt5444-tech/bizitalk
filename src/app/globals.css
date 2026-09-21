@@ -21,6 +21,13 @@
 
   --color-rose: #b91c1c;
   --color-rose-tint: #fbe9e9;
+
+  /* Material Design 3 style elevation: soft, layered shadows rather than
+     hard borders, used sparingly on cards that benefit from feeling
+     "raised" (vs. flat bordered surfaces used for dense lists). */
+  --shadow-card: 0 1px 2px 0 rgb(15 23 42 / 0.05), 0 1px 3px 0 rgb(15 23 42 / 0.06);
+  --shadow-card-hover: 0 10px 24px -8px rgb(15 23 42 / 0.16), 0 2px 6px -2px rgb(15 23 42 / 0.07);
+  --shadow-elevated: 0 20px 48px -12px rgb(15 23 42 / 0.24), 0 6px 16px -6px rgb(15 23 42 / 0.1);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -44,6 +51,13 @@
 
     --color-rose: #e08a8a;
     --color-rose-tint: #2b1a1a;
+
+    /* Shadows read as near-invisible on dark backgrounds at light-mode
+       opacity, so darken and tighten them rather than reuse the same
+       values. */
+    --shadow-card: 0 1px 2px 0 rgb(0 0 0 / 0.3), 0 1px 3px 0 rgb(0 0 0 / 0.25);
+    --shadow-card-hover: 0 10px 24px -8px rgb(0 0 0 / 0.45), 0 2px 6px -2px rgb(0 0 0 / 0.3);
+    --shadow-elevated: 0 20px 48px -12px rgb(0 0 0 / 0.55), 0 6px 16px -6px rgb(0 0 0 / 0.35);
   }
 }
 
@@ -67,6 +81,10 @@
 
   --color-rose: var(--color-rose);
   --color-rose-tint: var(--color-rose-tint);
+
+  --shadow-card: var(--shadow-card);
+  --shadow-card-hover: var(--shadow-card-hover);
+  --shadow-elevated: var(--shadow-elevated);
 
   --font-display: "Zen Old Mincho", serif;
   --font-sans: "Noto Sans JP", ui-sans-serif, system-ui, sans-serif;
