@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowLeft, BookOpen } from "lucide-react";
+import { ArrowLeft, BookOpen, Clock } from "lucide-react";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser, isEntitled } from "@/lib/entitlements";
@@ -26,7 +26,7 @@ export default async function ConversationScenarioPage({
   const { data: scenario } = await supabase
     .from("conversation_scenarios")
     .select(
-      "id, slug, title, description, category, level, persona_name, persona_role, persona_background, opening_line, is_free, briefing_en, briefing_ja",
+      "id, slug, title, description, category, level, persona_name, persona_role, persona_background, opening_line, is_free, briefing_en, briefing_ja, estimated_minutes",
     )
     .eq("slug", slug)
     .maybeSingle();
@@ -65,6 +65,12 @@ export default async function ConversationScenarioPage({
         <span className="inline-block rounded-full bg-signal-tint px-3 py-1 text-xs font-semibold text-signal-dim">
           {LEVEL_LABELS[(scenario.level as ScenarioLevel) ?? "beginner"]}
         </span>
+        {scenario.estimated_minutes && (
+          <span className="inline-flex items-center gap-1 rounded-full bg-paper-dim px-3 py-1 text-xs font-medium text-ink-faint">
+            <Clock size={12} strokeWidth={2} />
+            目安 {scenario.estimated_minutes}分
+          </span>
+        )}
         {scenario.is_free && (
           <span className="inline-block rounded-full bg-amber-tint px-3 py-1 text-xs font-semibold text-amber-dim">
             無料お試し

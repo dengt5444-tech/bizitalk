@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Clock } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser, isEntitled } from "@/lib/entitlements";
 import { Avatar } from "@/components/Avatar";
@@ -24,7 +24,7 @@ export default async function ConversationPage() {
     supabase
       .from("conversation_scenarios")
       .select(
-        "id, slug, title, description, category, level, persona_name, persona_role, is_free, order_index",
+        "id, slug, title, description, category, level, persona_name, persona_role, is_free, order_index, estimated_minutes",
       )
       .order("order_index", { ascending: true }),
     getCurrentUser(),
@@ -155,8 +155,14 @@ export default async function ConversationPage() {
                                 {scenario.title}
                               </p>
                             </div>
-                            <p className="mt-2 text-xs font-medium text-signal">
+                            <p className="mt-2 flex flex-wrap items-center gap-x-2 text-xs font-medium text-signal">
                               話し相手: {scenario.persona_name}（{scenario.persona_role}）
+                              {scenario.estimated_minutes && (
+                                <span className="inline-flex items-center gap-1 text-ink-faint">
+                                  <Clock size={11} strokeWidth={2} />
+                                  目安 {scenario.estimated_minutes}分
+                                </span>
+                              )}
                             </p>
                             <p className="mt-2 text-sm leading-relaxed text-ink-soft">
                               {scenario.description}
