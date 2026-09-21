@@ -153,7 +153,7 @@ const scenarios = [
     title: "採用面接の練習",
     description:
       "英語での採用面接を想定した練習。自己紹介、経験の説明、志望動機の伝え方など、面接でよく聞かれる質問に答える力がつきます。",
-    category: "teammates",
+    category: "interview",
     level: "intermediate",
     is_free: false,
     order_index: 6,
@@ -637,13 +637,13 @@ const scenarios = [
       "他部門のディレクターであるMarcus Webbさんと、今四半期の限られたエンジニアリングリソースを巡って競合する立場での会議です。経営層も同席しています。彼は最初から、お互い本当に必要なものについて率直に話そうと切り出してきます。話す前に、自チームの優先順位を整理し、「本当に必要なもの」と「あれば嬉しい程度のもの」を区別しておきましょう。単なる主張のぶつけ合いではなく、交渉として臨めるようになります。",
     estimated_minutes: 12,
   },
-  // ---------------- abroad (海外就活・生活) ----------------
+  // ---------------- interview (面接練習) ----------------
   {
     slug: "foreign-company-hr-screening",
     title: "外資系企業の一次面接(人事担当)",
     description:
       "外資系企業への転職を目指す、人事担当者との一次スクリーニング面接の練習。経歴・志望動機・英語力の確認が中心です。",
-    category: "abroad",
+    category: "interview",
     level: "intermediate",
     is_free: false,
     order_index: 27,
@@ -666,7 +666,7 @@ const scenarios = [
     title: "外資系企業の二次面接(現場マネージャー)",
     description:
       "実際に配属される部署のマネージャーとの、より踏み込んだ二次面接の練習。行動面接(STAR形式)の質問に対応します。",
-    category: "abroad",
+    category: "interview",
     level: "advanced",
     is_free: false,
     order_index: 28,
@@ -684,12 +684,13 @@ const scenarios = [
     briefing_ja:
       "配属予定チームのマネージャー、James Fosterさんによる、より踏み込んだ二次面接です。「困難な状況にどう対応したか」といった行動面接(STAR形式)の質問が中心で、曖昧な回答には深掘りの質問が飛んできます。話す前に、状況・行動・結果が明確な具体的エピソードを1〜2つ準備しておきましょう。",
   },
+  // ---------------- workingHoliday (ワーキングホリデー) ----------------
   {
     slug: "working-holiday-cafe-job-interview",
     title: "ワーホリ先のカフェでの求人面接",
     description:
       "ワーキングホリデー先で、カフェの求人に応募して面接を受ける練習。フレンドリーだが実務的なやり取りです。",
-    category: "abroad",
+    category: "workingHoliday",
     level: "beginner",
     is_free: true,
     order_index: 29,
@@ -712,7 +713,7 @@ const scenarios = [
     title: "ワーホリ先でのシェアハウス内見",
     description:
       "ワーキングホリデー先で、シェアハウスの部屋を内見し、家賃やルールについて大家さんと話す練習。",
-    category: "abroad",
+    category: "workingHoliday",
     level: "beginner",
     is_free: false,
     order_index: 30,
@@ -735,7 +736,7 @@ const scenarios = [
     title: "ワーホリ先での銀行口座開設",
     description:
       "ワーキングホリデー先の銀行窓口で、口座開設の手続きをする練習。必要書類やカードの受け取りについてのやり取りです。",
-    category: "abroad",
+    category: "workingHoliday",
     level: "beginner",
     is_free: false,
     order_index: 31,

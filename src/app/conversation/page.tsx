@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, Clock } from "lucide-react";
+import { ArrowRight, ChevronDown, Clock } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser, isEntitled } from "@/lib/entitlements";
 import { Avatar } from "@/components/Avatar";
@@ -79,7 +79,7 @@ export default async function ConversationPage() {
                 {freeTalk.title}
               </p>
               {!loggedInAndEntitled(freeTalk.is_free) && (
-                <span className="rounded-full bg-paper/90 px-2.5 py-1 text-xs font-medium text-ink-faint">
+                <span className="rounded-full bg-surface px-2.5 py-1 text-xs font-semibold text-ink-soft shadow-sm">
                   ロック中
                 </span>
               )}
@@ -101,10 +101,10 @@ export default async function ConversationPage() {
           if (items.length === 0) return null;
 
           return (
-            <section key={category}>
-              <div className="mb-4 flex items-center gap-4 border-b border-line pb-4">
+            <details key={category} className="group" open>
+              <summary className="mb-4 flex cursor-pointer list-none items-center gap-4 border-b border-line pb-4 [&::-webkit-details-marker]:hidden">
                 <CategoryIllustration category={category} size={48} className="shrink-0" />
-                <div>
+                <div className="flex-1">
                   <div className="flex items-baseline gap-3">
                     <h2 className="font-display text-xl font-semibold text-ink">
                       {CATEGORY_LABELS[category]}
@@ -115,7 +115,12 @@ export default async function ConversationPage() {
                     {CATEGORY_DESCRIPTIONS[category]}
                   </p>
                 </div>
-              </div>
+                <ChevronDown
+                  size={18}
+                  strokeWidth={2}
+                  className="shrink-0 text-ink-faint transition-transform duration-200 group-open:rotate-180"
+                />
+              </summary>
 
               <ul className="grid gap-4 sm:grid-cols-2">
                 {items.map((scenario) => {
@@ -133,7 +138,7 @@ export default async function ConversationPage() {
                             className="transition duration-300 group-hover:scale-105"
                           />
                           <div className="absolute top-3 right-3 flex flex-col items-end gap-1">
-                            <span className="rounded-full bg-paper/90 px-2.5 py-1 text-[11px] font-medium text-ink-faint">
+                            <span className="rounded-full bg-surface px-2.5 py-1 text-xs font-semibold text-ink shadow-sm">
                               {LEVEL_LABELS[(scenario.level as ScenarioLevel) ?? "beginner"]}
                             </span>
                             {scenario.is_free ? (
@@ -141,7 +146,7 @@ export default async function ConversationPage() {
                                 無料
                               </span>
                             ) : !unlocked ? (
-                              <span className="rounded-full bg-paper/90 px-2.5 py-1 text-xs font-medium text-ink-faint">
+                              <span className="rounded-full bg-surface px-2.5 py-1 text-xs font-semibold text-ink-soft shadow-sm">
                                 ロック中
                               </span>
                             ) : null}
@@ -178,7 +183,7 @@ export default async function ConversationPage() {
                   );
                 })}
               </ul>
-            </section>
+            </details>
           );
         })}
       </div>

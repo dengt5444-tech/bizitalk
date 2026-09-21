@@ -40,7 +40,16 @@ function Glyph({ category }: { category: ScenarioCategory }) {
           <path d="M42 25l-8 7 3.2 3.2c1.6 1.6 4.2 1.6 5.8 0l.2-.2c1.4-1.4 1.4-3.6 0-5z" />
         </g>
       );
-    case "abroad":
+    case "interview":
+      return (
+        <g {...common}>
+          <rect x="18" y="14" width="28" height="36" rx="4" />
+          <rect x="26" y="10" width="12" height="8" rx="2" />
+          <path d="M24 28h16M24 36h10" />
+          <path d="M32 40l3.5 3.5L42 37" />
+        </g>
+      );
+    case "workingHoliday":
       return (
         <g {...common}>
           <path d="M14 36l36-14-14 36-4-16-16-6z" />
@@ -62,7 +71,8 @@ const GRADIENTS: Record<ScenarioCategory, [string, string]> = {
   international: ["#2dd4bf", "#0d9488"],
   clients: ["#a78bfa", "#7c3aed"],
   leadership: ["#f0ad5e", "#b45309"],
-  abroad: ["#ec4899", "#db2777"],
+  interview: ["#818cf8", "#4f46e5"],
+  workingHoliday: ["#ec4899", "#db2777"],
 };
 
 export function CategoryIllustration({
