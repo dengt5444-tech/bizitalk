@@ -86,7 +86,7 @@ export default async function MaterialPage({
       <div className="mt-8 space-y-6">
         {unlocked ? (
           <>
-            <div className="rounded-2xl border border-line bg-surface p-6">
+            <div className="rounded-3xl bg-surface p-6 shadow-card">
               <AudioPlayer materialId={material.id} />
               <details className="mt-5 text-sm">
                 <summary className="cursor-pointer font-semibold text-signal">
@@ -119,7 +119,7 @@ export default async function MaterialPage({
             />
           </>
         ) : (
-          <div className="rounded-2xl border border-line bg-paper-dim p-8 text-center">
+          <div className="rounded-3xl bg-paper-dim p-8 text-center shadow-card">
             <p className="font-display font-semibold text-ink">
               この教材はロックされています
             </p>

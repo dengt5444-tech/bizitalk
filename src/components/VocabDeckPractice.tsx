@@ -90,7 +90,7 @@ function FlashcardDeck({ words }: { words: VocabWord[] }) {
 
   if (done) {
     return (
-      <div className="mt-6 rounded-2xl border border-line bg-surface p-8 text-center">
+      <div className="mt-6 rounded-3xl bg-surface p-8 text-center shadow-card">
         <p className="font-display text-lg font-semibold text-ink">
           {deck.length}語、お疲れさまでした!
         </p>
@@ -116,7 +116,7 @@ function FlashcardDeck({ words }: { words: VocabWord[] }) {
       <button
         type="button"
         onClick={() => setFlipped((f) => !f)}
-        className="mt-3 flex min-h-[12rem] w-full flex-col items-center justify-center rounded-2xl border border-line bg-surface p-8 text-center transition hover:border-ink-faint"
+        className="mt-3 flex min-h-[12rem] w-full flex-col items-center justify-center rounded-3xl bg-surface p-8 text-center shadow-card transition duration-300 hover:shadow-card-hover"
       >
         {flipped ? (
           <>

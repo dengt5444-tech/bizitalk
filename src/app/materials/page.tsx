@@ -74,7 +74,7 @@ export default async function MaterialsPage() {
                     <li key={material.id}>
                       <Link
                         href={`/materials/${material.slug}`}
-                        className="group flex h-full flex-col overflow-hidden rounded-2xl border border-line bg-surface shadow-card transition hover:-translate-y-0.5 hover:border-ink-faint hover:shadow-card-hover"
+                        className="group flex h-full flex-col overflow-hidden rounded-3xl bg-surface shadow-card transition duration-300 hover:-translate-y-1.5 hover:shadow-elevated"
                       >
                         <div className="relative h-32 w-full overflow-hidden">
                           <SceneIllustration

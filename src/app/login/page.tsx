@@ -102,7 +102,7 @@ function LoginForm() {
 
   return (
     <main className="mx-auto flex min-h-[80vh] max-w-md flex-col justify-center px-6 py-16">
-      <div className="rounded-2xl border border-line bg-surface p-8 shadow-card">
+      <div className="rounded-3xl bg-surface p-8 shadow-elevated">
         <h1 className="font-display text-2xl font-semibold text-ink">
           ログイン
         </h1>

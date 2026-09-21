@@ -25,9 +25,11 @@
   /* Material Design 3 style elevation: soft, layered shadows rather than
      hard borders, used sparingly on cards that benefit from feeling
      "raised" (vs. flat bordered surfaces used for dense lists). */
-  --shadow-card: 0 1px 2px 0 rgb(15 23 42 / 0.05), 0 1px 3px 0 rgb(15 23 42 / 0.06);
-  --shadow-card-hover: 0 10px 24px -8px rgb(15 23 42 / 0.16), 0 2px 6px -2px rgb(15 23 42 / 0.07);
-  --shadow-elevated: 0 20px 48px -12px rgb(15 23 42 / 0.24), 0 6px 16px -6px rgb(15 23 42 / 0.1);
+  --shadow-card: 0 2px 6px 0 rgb(15 23 42 / 0.07), 0 8px 20px -6px rgb(15 23 42 / 0.1);
+  --shadow-card-hover: 0 16px 32px -10px rgb(15 23 42 / 0.22), 0 6px 12px -4px rgb(15 23 42 / 0.12);
+  --shadow-elevated: 0 28px 60px -16px rgb(15 23 42 / 0.3), 0 10px 24px -8px rgb(15 23 42 / 0.14);
+
+  --radius-4xl: 1.75rem;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -55,9 +57,9 @@
     /* Shadows read as near-invisible on dark backgrounds at light-mode
        opacity, so darken and tighten them rather than reuse the same
        values. */
-    --shadow-card: 0 1px 2px 0 rgb(0 0 0 / 0.3), 0 1px 3px 0 rgb(0 0 0 / 0.25);
-    --shadow-card-hover: 0 10px 24px -8px rgb(0 0 0 / 0.45), 0 2px 6px -2px rgb(0 0 0 / 0.3);
-    --shadow-elevated: 0 20px 48px -12px rgb(0 0 0 / 0.55), 0 6px 16px -6px rgb(0 0 0 / 0.35);
+    --shadow-card: 0 2px 6px 0 rgb(0 0 0 / 0.35), 0 8px 20px -6px rgb(0 0 0 / 0.3);
+    --shadow-card-hover: 0 16px 32px -10px rgb(0 0 0 / 0.5), 0 6px 12px -4px rgb(0 0 0 / 0.35);
+    --shadow-elevated: 0 28px 60px -16px rgb(0 0 0 / 0.6), 0 10px 24px -8px rgb(0 0 0 / 0.4);
   }
 }
 
@@ -117,8 +119,50 @@ body {
   0%, 100% { transform: scale(0.95); }
   50% { transform: scale(1.06); }
 }
+/* Homepage hero illustration (HeroIllustration.tsx) — the two gradient
+   blobs drift slowly and independently, the waveform bars pulse like a
+   live audio meter, and the small accent dots bob gently, so the hero
+   reads as "a conversation happening" rather than a static graphic. */
+@keyframes hero-drift-a {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(6px, -10px) scale(1.05); }
+}
+@keyframes hero-drift-b {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(-8px, 8px) scale(1.04); }
+}
+@keyframes eq-pulse {
+  0%, 100% { transform: scaleY(0.75); }
+  50% { transform: scaleY(1.3); }
+}
+@keyframes dot-bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+.hero-blob-a { animation: hero-drift-a 7s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+.hero-blob-b { animation: hero-drift-b 8s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+.eq-bar { animation: eq-pulse 1.4s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+.hero-dot { animation: dot-bob 4s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+
+/* Scroll-reveal fade/rise, driven by Reveal.tsx toggling data-visible. */
+[data-reveal] {
+  opacity: 0;
+  transform: translateY(28px);
+  transition: opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1), transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+}
+[data-reveal="true"] {
+  opacity: 1;
+  transform: translateY(0);
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .orb-glow, .orb-core {
+  .orb-glow, .orb-core,
+  .hero-blob-a, .hero-blob-b, .eq-bar, .hero-dot {
     animation: none !important;
+  }
+  [data-reveal] {
+    opacity: 1;
+    transform: none;
+    transition: none;
   }
 }

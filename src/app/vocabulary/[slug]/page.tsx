@@ -58,7 +58,7 @@ export default async function VocabDeckPage({
       {unlocked ? (
         <VocabDeckPractice deckTitle={deck.title} words={words} isLoggedIn={!!user} />
       ) : (
-        <div className="mt-8 rounded-2xl border border-line bg-paper-dim p-8 text-center">
+        <div className="mt-8 rounded-3xl bg-paper-dim p-8 text-center shadow-card">
           <p className="font-display font-semibold text-ink">この単語帳はロックされています</p>
           <p className="mt-2 text-sm text-ink-soft">
             {user

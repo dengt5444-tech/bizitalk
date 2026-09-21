@@ -125,7 +125,7 @@ export default async function DashboardPage() {
       </div>
 
       {trend.length >= 2 && (
-        <section className="mt-12 rounded-2xl border border-line bg-surface p-6 shadow-card">
+        <section className="mt-12 rounded-3xl bg-surface p-6 shadow-card">
           <h2 className="font-display text-lg font-semibold text-ink">
             フルエンシースコアの推移
           </h2>
@@ -158,7 +158,7 @@ export default async function DashboardPage() {
 
       <div className="mt-12 grid gap-6 sm:grid-cols-[1fr_1.4fr]">
         {recommended && (
-          <section className="rounded-2xl border border-line bg-ink p-6 shadow-card">
+          <section className="rounded-3xl bg-ink p-6 shadow-elevated">
             <p className="text-xs font-medium tracking-[0.15em] text-paper/70 uppercase">
               次におすすめ
             </p>
@@ -178,15 +178,15 @@ export default async function DashboardPage() {
             </p>
             <Link
               href={`/conversation/${recommended.slug}`}
-              className="mt-5 inline-flex items-center gap-1.5 rounded-full bg-signal px-5 py-2.5 text-sm font-medium text-paper transition hover:bg-signal-dim"
+              className="group mt-5 inline-flex items-center gap-1.5 rounded-full bg-signal px-5 py-2.5 text-sm font-medium text-paper transition duration-300 hover:-translate-y-0.5 hover:bg-signal-dim hover:shadow-card"
             >
               このシーンを話す
-              <ArrowRight size={16} strokeWidth={2} />
+              <ArrowRight size={16} strokeWidth={2} className="transition-transform group-hover:translate-x-1" />
             </Link>
           </section>
         )}
 
-        <section className="rounded-2xl border border-line bg-surface p-6 shadow-card">
+        <section className="rounded-3xl bg-surface p-6 shadow-card">
           <div className="flex items-center justify-between">
             <h2 className="font-display text-lg font-semibold text-ink">
               最近の会話
@@ -261,7 +261,7 @@ function StatTile({
   unit: string;
 }) {
   return (
-    <div className="rounded-2xl border border-line bg-surface p-5 shadow-card">
+    <div className="rounded-2xl bg-surface p-5 shadow-card transition duration-300 hover:-translate-y-1 hover:shadow-card-hover">
       <p className="text-xs text-ink-faint">{label}</p>
       <p className="mt-2 font-display text-3xl font-semibold text-ink">
         {value}

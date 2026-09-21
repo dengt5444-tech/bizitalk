@@ -37,7 +37,7 @@ export default async function VocabularyPage() {
             <li key={deck.id}>
               <Link
                 href={`/vocabulary/${deck.slug}`}
-                className="group flex h-full flex-col justify-between rounded-2xl border border-line bg-surface p-5 shadow-card transition hover:-translate-y-0.5 hover:border-ink-faint hover:shadow-card-hover"
+                className="group flex h-full flex-col justify-between rounded-3xl bg-surface p-5 shadow-card transition duration-300 hover:-translate-y-1.5 hover:shadow-elevated"
               >
                 <div>
                   <div className="flex items-center justify-between">

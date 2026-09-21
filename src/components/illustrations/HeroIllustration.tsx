@@ -39,6 +39,7 @@ export function HeroIllustration({ className = "" }: { className?: string }) {
         ry="130"
         fill={`url(#hero-a-${id})`}
         filter={`url(#hero-blur-${id})`}
+        className="hero-blob-a"
       />
       <ellipse
         cx="340"
@@ -47,6 +48,7 @@ export function HeroIllustration({ className = "" }: { className?: string }) {
         ry="120"
         fill={`url(#hero-b-${id})`}
         filter={`url(#hero-blur-${id})`}
+        className="hero-blob-b"
       />
 
       <g transform="translate(140,180)">
@@ -60,14 +62,16 @@ export function HeroIllustration({ className = "" }: { className?: string }) {
             height={h}
             rx="3.5"
             fill={i % 3 === 0 ? "var(--color-amber)" : "var(--color-signal)"}
+            className="eq-bar"
+            style={{ animationDelay: `${i * 0.09}s` }}
           />
         ))}
       </g>
 
-      <circle cx="90" cy="90" r="14" fill="var(--color-surface)" opacity="0.9" />
-      <circle cx="400" cy="120" r="10" fill="var(--color-surface)" opacity="0.85" />
-      <circle cx="370" cy="330" r="16" fill="var(--color-surface)" opacity="0.9" />
-      <circle cx="70" cy="300" r="11" fill="var(--color-surface)" opacity="0.85" />
+      <circle cx="90" cy="90" r="14" fill="var(--color-surface)" opacity="0.9" className="hero-dot" style={{ animationDelay: "0s" }} />
+      <circle cx="400" cy="120" r="10" fill="var(--color-surface)" opacity="0.85" className="hero-dot" style={{ animationDelay: "1s" }} />
+      <circle cx="370" cy="330" r="16" fill="var(--color-surface)" opacity="0.9" className="hero-dot" style={{ animationDelay: "2s" }} />
+      <circle cx="70" cy="300" r="11" fill="var(--color-surface)" opacity="0.85" className="hero-dot" style={{ animationDelay: "0.5s" }} />
     </svg>
   );
 }

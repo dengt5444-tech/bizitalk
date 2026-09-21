@@ -64,7 +64,7 @@ export default async function ConversationPage() {
       {freeTalk && (
         <Link
           href={`/conversation/${freeTalk.slug}`}
-          className="group mt-10 flex flex-col gap-5 overflow-hidden rounded-2xl border border-signal/30 bg-signal-tint p-6 transition hover:border-signal sm:flex-row sm:items-center"
+          className="group mt-10 flex flex-col gap-5 overflow-hidden rounded-3xl bg-signal-tint p-6 shadow-card transition duration-300 hover:-translate-y-1 hover:shadow-elevated sm:flex-row sm:items-center"
         >
           <div className="relative h-28 w-full shrink-0 overflow-hidden rounded-xl sm:w-40">
             <SceneIllustration
@@ -125,7 +125,7 @@ export default async function ConversationPage() {
                     <li key={scenario.id}>
                       <Link
                         href={`/conversation/${scenario.slug}`}
-                        className="group flex h-full flex-col overflow-hidden rounded-2xl border border-line bg-surface shadow-card transition hover:-translate-y-0.5 hover:border-ink-faint hover:shadow-card-hover"
+                        className="group flex h-full flex-col overflow-hidden rounded-3xl bg-surface shadow-card transition duration-300 hover:-translate-y-1.5 hover:shadow-elevated"
                       >
                         <div className="relative h-32 w-full overflow-hidden">
                           <SceneIllustration

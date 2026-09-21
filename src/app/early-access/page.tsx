@@ -19,7 +19,7 @@ export default function EarlyAccessPage() {
           <span className="h-px w-6 bg-signal" />
           先行無料モニター募集
         </span>
-        <h1 className="mt-6 font-display text-3xl leading-[1.3] font-semibold text-ink sm:text-4xl">
+        <h1 className="mt-6 font-display text-4xl leading-[1.2] font-semibold text-ink sm:text-5xl">
           正式リリースに先立って、
           <br />
           5名様に全機能を無料でお試しいただけます
@@ -29,7 +29,7 @@ export default function EarlyAccessPage() {
         </p>
       </div>
 
-      <ul className="mt-10 space-y-3 rounded-2xl border border-line bg-surface p-6 shadow-card">
+      <ul className="mt-10 space-y-3 rounded-3xl bg-surface p-6 shadow-card">
         {FEATURES.map((feature) => (
           <li key={feature} className="flex items-start gap-2.5 text-sm text-ink-soft">
             <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-signal-tint text-signal">

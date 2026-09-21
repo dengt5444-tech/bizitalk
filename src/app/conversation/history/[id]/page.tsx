@@ -71,7 +71,7 @@ export default async function ConversationHistoryDetailPage({
         {` ・ ${session.turn_count}ターン`}
       </p>
 
-      <details className="mt-8 rounded-2xl border border-line bg-surface p-6">
+      <details className="mt-8 rounded-3xl bg-surface p-6 shadow-card">
         <summary className="cursor-pointer font-display font-semibold text-ink">
           会話の全文を見る
         </summary>
@@ -98,7 +98,7 @@ export default async function ConversationHistoryDetailPage({
         </div>
       </details>
 
-      <div className="mt-8 rounded-2xl border border-line bg-surface p-6 sm:p-8">
+      <div className="mt-8 rounded-3xl bg-surface p-6 shadow-card sm:p-8">
         <FeedbackPanel feedback={feedback} scenarioTitle={scenario?.title ?? ""} />
       </div>
     </main>

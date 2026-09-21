@@ -43,7 +43,7 @@ export function VocabList({
   }
 
   return (
-    <div className="rounded-2xl border border-line bg-surface p-6 shadow-card">
+    <div className="rounded-3xl bg-surface p-6 shadow-card">
       <h2 className="font-display text-lg font-semibold text-ink">
         重要単語・難しい単語
       </h2>

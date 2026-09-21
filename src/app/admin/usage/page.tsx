@@ -90,14 +90,14 @@ export default async function AdminUsagePage() {
       </p>
 
       <div className="mt-8 grid gap-4 sm:grid-cols-2">
-        <div className="rounded-2xl border border-line bg-surface p-5 shadow-card">
+        <div className="rounded-3xl bg-surface p-5 shadow-card">
           <p className="text-xs text-ink-faint">今月の合計利用時間</p>
           <p className="mt-2 font-display text-3xl font-semibold text-ink">
             {totalMinutes}
             <span className="ml-1 text-sm font-normal text-ink-faint">分</span>
           </p>
         </div>
-        <div className="rounded-2xl border border-line bg-surface p-5 shadow-card">
+        <div className="rounded-3xl bg-surface p-5 shadow-card">
           <p className="text-xs text-ink-faint">
             推定コスト(¥{ESTIMATED_YEN_PER_MINUTE}/分の見積もりで計算・未検証)
           </p>

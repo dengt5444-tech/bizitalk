@@ -100,7 +100,7 @@ export default async function ConversationScenarioPage({
             }}
           />
         ) : (
-          <div className="rounded-2xl border border-line bg-paper-dim p-8 text-center">
+          <div className="rounded-3xl bg-paper-dim p-8 text-center shadow-card">
             <p className="font-display font-semibold text-ink">
               {!user ? "ログインが必要です" : "このシーンはロックされています"}
             </p>

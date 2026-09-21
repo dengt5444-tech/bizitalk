@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import { Check, Plus } from "lucide-react";
+import { Reveal } from "@/components/Reveal";
 import {
   getConversationPlan,
   getCurrentUser,
@@ -145,7 +146,7 @@ export default async function PricingPage() {
         <p className="text-xs font-medium tracking-[0.2em] text-signal uppercase">
           Pricing
         </p>
-        <h1 className="mt-3 font-display text-3xl font-semibold text-ink sm:text-4xl">
+        <h1 className="mt-3 font-display text-4xl font-semibold text-ink sm:text-5xl">
           料金プラン
         </h1>
         <p className="mx-auto mt-3 max-w-xl text-ink-soft">
@@ -160,16 +161,16 @@ export default async function PricingPage() {
       )}
 
       <div className="mt-10 grid gap-6 sm:grid-cols-2">
-        {plans.map((plan) => {
+        {plans.map((plan, i) => {
           const accentText = plan.accent === "amber" ? "text-amber-dim" : "text-signal";
           const accentTint = plan.accent === "amber" ? "bg-amber-tint" : "bg-signal-tint";
           const accentTintText = plan.accent === "amber" ? "text-amber-dim" : "text-signal-dim";
           const current = isCurrentPlan(plan.key);
 
           return (
+            <Reveal key={plan.key} delay={i * 80} className="h-full">
             <div
-              key={plan.key}
-              className="rounded-3xl border border-line bg-surface p-8 text-center shadow-card transition hover:shadow-card-hover"
+              className="h-full rounded-[1.75rem] bg-surface p-8 text-center shadow-card transition duration-300 hover:-translate-y-1.5 hover:shadow-elevated"
             >
               <span className={`inline-block rounded-full ${accentTint} px-4 py-1.5 text-xs font-semibold ${accentTintText}`}>
                 {plan.badge}
@@ -213,6 +214,7 @@ export default async function PricingPage() {
                 )}
               </div>
             </div>
+            </Reveal>
           );
         })}
       </div>
@@ -221,7 +223,7 @@ export default async function PricingPage() {
         <h2 className="font-display text-xl font-semibold text-ink">
           よくある質問
         </h2>
-        <div className="mt-5 divide-y divide-line rounded-2xl border border-line bg-surface px-5 shadow-card">
+        <div className="mt-5 divide-y divide-line rounded-3xl bg-surface px-5 shadow-card">
           {FAQ.map((item) => (
             <details key={item.question} className="group py-4">
               <summary className="cursor-pointer list-none font-medium text-ink marker:content-none">
