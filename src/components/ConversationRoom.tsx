@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
-import { Check, Lightbulb, Loader2, Mic, MicOff, X } from "lucide-react";
+import { Check, Lightbulb, Loader2, Mic, MicOff, Play, X } from "lucide-react";
 import type {
   ConversationFeedback,
   ConversationTurn,
@@ -273,9 +273,13 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
     });
   }
 
+  // Fetches a hint unconditionally — callers decide whether guided mode's
+  // "auto-show after every turn" setting applies (see autoFetchHint below);
+  // a learner tapping the on-demand hint button should always get one
+  // regardless of that setting.
   async function fetchHint(transcript: ConversationTurn[]) {
     const id = sessionIdRef.current;
-    if (!id || !guidedModeRef.current) return;
+    if (!id) return;
     const requestId = ++hintRequestIdRef.current;
     setHintLoading(true);
     try {
@@ -299,6 +303,13 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
     } finally {
       if (requestId === hintRequestIdRef.current) setHintLoading(false);
     }
+  }
+
+  // Used after each AI turn — only actually fetches when guided mode's
+  // "show automatically" setting is on. The on-demand hint button calls
+  // fetchHint directly instead, bypassing this gate.
+  function autoFetchHint(transcript: ConversationTurn[]) {
+    if (guidedModeRef.current) fetchHint(transcript);
   }
 
   function clearHint() {
@@ -336,7 +347,7 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
     if (role === "user") {
       clearHint();
     } else {
-      fetchHint(next);
+      autoFetchHint(next);
     }
     if (nextTurnCount >= MAX_TURNS_PER_SESSION) {
       muteMic();
@@ -565,7 +576,7 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
       transcriptRef.current = data.transcript;
       setMessages(data.transcript);
       setTurnCount(0);
-      fetchHint(data.transcript);
+      autoFetchHint(data.transcript);
 
       if (chosenMode === "realtime") {
         setPhase("connecting");
@@ -634,7 +645,7 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
 
       const next = pushTurn({ role: "assistant", text: data.reply });
       setTurnCount(data.turnCount);
-      fetchHint(next);
+      autoFetchHint(next);
       if (autoPlay) {
         playAudio(data.assistantIndex);
       }
@@ -780,14 +791,14 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
             }`}
           >
             <Lightbulb size={16} strokeWidth={2} />
-            ガイド付きで練習する
+            毎回ヒントを自動表示する
             {guidedMode && <Check size={15} strokeWidth={2.5} />}
           </button>
-          {guidedMode && (
-            <p className="mx-auto mt-2 max-w-sm text-xs text-ink-faint">
-              相手が話すたびに「こう言ってみましょう」という返答例が表示されます。
-            </p>
-          )}
+          <p className="mx-auto mt-2 max-w-sm text-xs text-ink-faint">
+            {guidedMode
+              ? "相手が話すたびに「こう言ってみましょう」という返答例が表示されます。"
+              : "オフでも、会話中いつでもヒントボタンから返答例を呼び出せます。"}
+          </p>
           <div className="mt-6 flex flex-col items-center gap-3">
             {supportsRealtime && (
               <button
@@ -867,14 +878,14 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
                     aria-label="音声を再生"
                     className="shrink-0 text-ink-faint transition hover:text-signal"
                   >
-                    ▶
+                    <Play size={14} strokeWidth={2} fill="currentColor" />
                   </button>
                 )}
               </div>
             ))}
           </div>
 
-          {guidedMode && (hint || hintLoading) && (
+          {(hint || hintLoading) && (
             <div className="px-5 pb-4">
               <HintCard reply={hint?.reply ?? null} gloss={hint?.gloss ?? null} loading={hintLoading} onRefresh={() => fetchHint(transcriptRef.current)} />
             </div>
@@ -938,14 +949,25 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
               </button>
             </div>
 
-            <button
-              type="button"
-              onClick={handleEnd}
-              disabled={turnCount < 1 || ending}
-              className="mt-3 w-full rounded-full border border-line px-4 py-2.5 text-sm font-medium text-ink transition hover:border-ink-faint disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              {ending ? "フィードバックを作成中..." : "会話を終えてフィードバックを見る"}
-            </button>
+            <div className="mt-3 flex gap-2">
+              <button
+                type="button"
+                onClick={() => fetchHint(transcriptRef.current)}
+                disabled={hintLoading || turnLimitReached}
+                className="flex shrink-0 items-center gap-1.5 rounded-full border border-line px-4 py-2.5 text-sm font-medium text-ink-soft transition hover:border-ink-faint hover:text-ink disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                <Lightbulb size={15} strokeWidth={2} />
+                ヒント
+              </button>
+              <button
+                type="button"
+                onClick={handleEnd}
+                disabled={turnCount < 1 || ending}
+                className="w-full rounded-full border border-line px-4 py-2.5 text-sm font-medium text-ink transition hover:border-ink-faint disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                {ending ? "フィードバックを作成中..." : "会話を終えてフィードバックを見る"}
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -1028,7 +1050,7 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
         </div>
 
         <div className="mx-auto w-full max-w-md space-y-3 px-5 sm:px-8">
-          {guidedMode && phase === "chatting" && (hint || hintLoading) && (
+          {phase === "chatting" && (hint || hintLoading) && (
             <HintCard reply={hint?.reply ?? null} gloss={hint?.gloss ?? null} loading={hintLoading} onRefresh={() => fetchHint(transcriptRef.current)} />
           )}
           {turnLimitReached ? (
@@ -1069,6 +1091,15 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
             placeholder="マイクで話すか、代わりにここに入力できます"
             className="h-11 flex-1 rounded-full border border-line bg-surface px-4 text-sm text-ink outline-none focus:border-signal disabled:cursor-not-allowed disabled:opacity-60"
           />
+          <button
+            type="button"
+            onClick={() => fetchHint(transcriptRef.current)}
+            disabled={hintLoading || turnLimitReached || phase !== "chatting"}
+            aria-label="ヒントを見る"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-paper-dim text-ink-soft transition hover:text-ink disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            <Lightbulb size={19} strokeWidth={2} />
+          </button>
           <button
             type="button"
             onClick={handleMicMuteToggle}
