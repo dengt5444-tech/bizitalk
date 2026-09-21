@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, BookOpen } from "lucide-react";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser, isEntitled } from "@/lib/entitlements";
@@ -26,11 +26,7 @@ export default async function ConversationScenarioPage({
   const { data: scenario } = await supabase
     .from("conversation_scenarios")
     .select(
-      // briefing_en/briefing_ja are added back here once the 0009 migration
-      // has been run — see the bottom of this file's neighboring commit
-      // message. Selecting them before the columns exist would 500 every
-      // scenario page.
-      "id, slug, title, description, category, level, persona_name, persona_role, persona_background, opening_line, is_free",
+      "id, slug, title, description, category, level, persona_name, persona_role, persona_background, opening_line, is_free, briefing_en, briefing_ja",
     )
     .eq("slug", slug)
     .maybeSingle();
@@ -92,9 +88,20 @@ export default async function ConversationScenarioPage({
         <p className="mt-2 text-sm text-ink-faint">{scenario.persona_background}</p>
       )}
 
-      {/* Pre-reading briefing (briefing_en/briefing_ja) goes back here once
-          the 0009 migration has been run and the select above includes
-          those columns again. */}
+      {(scenario.briefing_en || scenario.briefing_ja) && (
+        <div className="mt-6 rounded-3xl bg-signal-tint p-6 shadow-card">
+          <p className="flex items-center gap-2 text-xs font-semibold tracking-[0.15em] text-signal-dim uppercase">
+            <BookOpen size={15} strokeWidth={2} />
+            始める前に読んでおきましょう
+          </p>
+          {scenario.briefing_en && (
+            <p className="mt-3 text-sm leading-relaxed text-ink">{scenario.briefing_en}</p>
+          )}
+          {scenario.briefing_ja && (
+            <p className="mt-3 text-sm leading-relaxed text-ink-soft">{scenario.briefing_ja}</p>
+          )}
+        </div>
+      )}
 
       <div className="mt-8">
         {unlocked ? (
