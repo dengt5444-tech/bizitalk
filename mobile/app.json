@@ -9,7 +9,8 @@
     "userInterfaceStyle": "automatic",
     "ios": {
       "bundleIdentifier": "com.bizitalk.app",
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bitcode": false
     },
     "android": {
       "package": "com.bizitalk.app",
@@ -18,7 +19,19 @@
         "foregroundImage": "./assets/android-icon-foreground.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.MODIFY_AUDIO_SETTINGS",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK",
+        "android.permission.ACCESS_NETWORK_STATE",
+        "android.permission.CAMERA",
+        "android.permission.INTERNET",
+        "android.permission.SYSTEM_ALERT_WINDOW",
+        "android.permission.WAKE_LOCK",
+        "android.permission.BLUETOOTH"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -56,7 +69,11 @@
       "expo-iap"
     ],
     "extra": {
-      "router": {}
-    }
+      "router": {},
+      "eas": {
+        "projectId": "e94cbd8f-a4a8-4ffb-af05-19a382f8b72b"
+      }
+    },
+    "owner": "saddjj"
   }
 }
