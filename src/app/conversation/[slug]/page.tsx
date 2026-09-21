@@ -26,6 +26,10 @@ export default async function ConversationScenarioPage({
   const { data: scenario } = await supabase
     .from("conversation_scenarios")
     .select(
+      // briefing_en/briefing_ja are added back here once the 0009 migration
+      // has been run — see the bottom of this file's neighboring commit
+      // message. Selecting them before the columns exist would 500 every
+      // scenario page.
       "id, slug, title, description, category, level, persona_name, persona_role, persona_background, opening_line, is_free",
     )
     .eq("slug", slug)
@@ -87,6 +91,10 @@ export default async function ConversationScenarioPage({
       {scenario.persona_background && (
         <p className="mt-2 text-sm text-ink-faint">{scenario.persona_background}</p>
       )}
+
+      {/* Pre-reading briefing (briefing_en/briefing_ja) goes back here once
+          the 0009 migration has been run and the select above includes
+          those columns again. */}
 
       <div className="mt-8">
         {unlocked ? (

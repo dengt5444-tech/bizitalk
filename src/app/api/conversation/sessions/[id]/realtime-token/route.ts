@@ -83,7 +83,11 @@ export async function POST(
           audio: {
             output: { voice: scenario.realtime_voice },
             input: {
-              transcription: { model: "whisper-1" },
+              // gpt-4o-mini-transcribe over whisper-1: notably less prone to
+              // hallucinating a phantom phrase from a brief noise blip or
+              // silence, which was turning into fake conversation turns
+              // the AI would then reply to.
+              transcription: { model: "gpt-4o-mini-transcribe" },
               turn_detection: { type: "semantic_vad" },
             },
           },

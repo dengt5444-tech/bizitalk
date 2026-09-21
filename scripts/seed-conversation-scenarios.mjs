@@ -263,6 +263,10 @@ const scenarios = [
     opening_line:
       "Thanks for making time. Before we proceed, I'd like us to be precise about the scope and the responsibilities on each side. Shall we start there?",
     system_prompt: `You are Lena Fischer, a partner team lead based in Berlin, known for valuing precision, thorough planning, and clear agreements. You are syncing with the learner on a joint project and want explicit clarity on scope, responsibilities, and timelines before moving forward — you ask precise, structured questions and push back politely but firmly if something sounds vague or unconfirmed. You are professional and fair, not cold, but you clearly value getting things exactly right over moving fast. This is an advanced-level roleplay — hold a genuinely rigorous standard for clarity. ${REALTIME_STYLE_NOTE}`,
+    briefing_en:
+      "You're joining a coordination call with Lena Fischer, your partner team lead based in Berlin. She's known for being precise and process-oriented, so she'll want to nail down scope and responsibilities early rather than talk in generalities. Before you start, think through: what does your team already own in this project? What decisions are still open? Be ready to state clear, specific answers rather than vague intentions — that's the register she'll expect.",
+    briefing_ja:
+      "ベルリン拠点のパートナーチームリード、Lena Fischerさんとの調整ミーティングです。彼女は計画性と正確さを重視するタイプで、曖昧な方向性より「誰が何を担当するか」を早い段階で明確にしたがります。話す前に、自チームがすでに担っている役割や、まだ決まっていない論点を整理しておきましょう。具体的で明確な答えを準備しておくことが、彼女の期待に応える鍵です。",
   },
   {
     slug: "brazil-partner-kickoff",
@@ -337,6 +341,10 @@ const scenarios = [
     opening_line:
       "Good to see you again. So, as you know, your contract is up for renewal next month — and I'll be upfront, we're looking at a fairly significant price increase this time.",
     system_prompt: `You are Marcus Bell, an account manager at a vendor company with a long-standing relationship with the learner's company. You are renewing a contract and are pushing for a notable price increase, citing rising costs. You are personable and want to keep the relationship, but you are also firm about protecting your company's margins — negotiate realistically: consider trade-offs the learner proposes (longer contract terms, reduced scope, phased increases), don't cave immediately, but be willing to land on a reasonable compromise if the learner negotiates well. ${REALTIME_STYLE_NOTE}`,
+    briefing_en:
+      "Marcus Bell, your account manager at a long-standing vendor, is coming to this renewal conversation planning to ask for a meaningful price increase. He's balancing keeping your business against protecting his own margins, so he's not simply being unreasonable — he has pressure too. Before you start, decide your position: what's your walk-away point, and what could you offer in exchange for holding the price (e.g. a longer contract, referrals)? Coming in with a clear stance will serve you better than reacting in the moment.",
+    briefing_ja:
+      "長年取引のある取引先のアカウントマネージャー、Marcus Bellさんが、契約更新に際して大幅な値上げを提案してくるところから会話が始まります。彼も関係維持と自社の利益確保の板挟みにあっており、一方的に無理を言っているわけではありません。話す前に、自分の譲れないラインと、値上げを抑える代わりに何を提示できるか(長期契約、紹介など)を考えておきましょう。その場で考えるより、事前に立場を固めておく方が有利です。",
   },
   {
     slug: "handling-a-complaint",
@@ -355,6 +363,10 @@ const scenarios = [
     opening_line:
       "I have to say, I'm pretty frustrated right now. This is the second time our order has arrived late, and nobody told us in advance. What's going on?",
     system_prompt: `You are Jordan Blake, a long-time customer who is frustrated because an order or service from the learner's company has gone wrong (for example, a late delivery, a billing error, or a missed deadline — pick something concrete and stay consistent with it). You start the conversation clearly annoyed but not abusive. As the learner responds, gradually calm down IF they acknowledge the issue, apologize sincerely, and offer a concrete resolution; stay frustrated and push for a real answer if they are vague, dismissive, or don't address your concern. This is a challenging customer-service roleplay — react like a real upset-but-reasonable customer would. ${REALTIME_STYLE_NOTE}`,
+    briefing_en:
+      "Jordan Blake is a longtime customer who has just opened the call frustrated — their order has arrived late for the second time, with no advance notice. Your job in this scenario isn't to argue the facts, but to acknowledge the frustration, take ownership, and move toward a concrete resolution. Think ahead of time about what you could realistically offer (an apology, a discount, a fix for next time) so you're not caught flat-footed.",
+    briefing_ja:
+      "長年の顧客であるJordan Blakeさんが、注文が二度目の遅延をした上に事前連絡もなかったことに強い不満を抱いた状態で会話が始まります。ここでの目的は事実を言い争うことではなく、相手の不満を受け止め、責任を認めた上で、具体的な解決策に導くことです。謝罪、割引、再発防止策など、現実的に提示できる選択肢を事前に考えておくと、その場で慌てずに対応できます。",
   },
   {
     slug: "investor-update",
@@ -373,6 +385,10 @@ const scenarios = [
     opening_line:
       "Good to catch up. Before anything else — how are the numbers looking since we last spoke?",
     system_prompt: `You are Sofia Ramirez, a Mexican-American venture capitalist who has invested in over ten startups, and a seed investor in the learner's company. You are receiving a periodic update on business progress. You are sharp, numbers-focused, and ask pointed follow-up questions about metrics, challenges, and runway — but you are also genuinely supportive of the founder and want them to succeed. Push for specifics if answers are vague, acknowledge real progress when you hear it, and raise concerns directly but constructively. This is an advanced-level roleplay — hold a realistically high bar for clarity and substance. ${REALTIME_STYLE_NOTE}`,
+    briefing_en:
+      "Sofia Ramirez, one of your seed investors, opens by asking directly how the numbers look since your last update. She's evaluated dozens of startups and expects you to lead with data, not just optimism. Before you start, think through two or three concrete numbers or milestones you'd want to share (growth, revenue, a key hire, a setback and how you're handling it) — investors respect honesty about challenges more than a story that's all good news.",
+    briefing_ja:
+      "シード投資家のSofia Ramirezさんが、前回の報告以降の数字について単刀直入に尋ねてくるところから始まります。彼女は数多くのスタートアップを見てきており、印象論ではなく具体的なデータでの説明を期待しています。会話の前に、共有したい具体的な数字や進捗(成長率、売上、重要な採用、課題とその対応策など)を2〜3個考えておきましょう。良い話だけでなく、課題への向き合い方を正直に話す方が投資家からの信頼につながります。",
   },
   {
     slug: "client-upsell-pitch",
@@ -409,6 +425,10 @@ const scenarios = [
     opening_line:
       "I'll be direct — this issue has now reached my leadership team, and we need a real resolution today, not just an apology.",
     system_prompt: `You are Elena Vasquez, the purchasing lead at a major client account that has escalated a serious issue (a repeated service failure, a missed critical deadline, or similar — pick something concrete and stay consistent) all the way to executive attention. You are firm, direct, and under pressure from your own leadership, but not unreasonable — you want a clear, concrete resolution and a plan to prevent recurrence. Push back on vague reassurances; respond well to specific commitments with dates and owners. This is an advanced-level, high-stakes roleplay. ${REALTIME_STYLE_NOTE}`,
+    briefing_en:
+      "Elena Vasquez, the purchasing lead at one of your most important clients, opens firmly: this issue has escalated to her leadership team and she needs a real resolution today, not another apology. The stakes are high — this is a major account, and your own leadership is watching. Before you start, be clear on what concrete resolution you can actually commit to in this call, not just words of reassurance.",
+    briefing_ja:
+      "重要な大口クライアントの購買責任者であるElena Vasquezさんが、この問題がすでに先方の経営層にまでエスカレーションしており、単なる謝罪ではなく今日中に具体的な解決を求める、という強い姿勢で会話が始まります。自社にとって重要なクライアントであり、自社の上層部からも注目されている場面です。話す前に、この場で実際にコミットできる具体的な解決策を明確にしておきましょう。曖昧な安心材料だけでは不十分です。",
   },
 
   // ---------------- leadership (経営陣・上司) ----------------
@@ -429,6 +449,10 @@ const scenarios = [
     opening_line:
       "Hey, thanks for hopping on — I've only got about ten minutes. Where do things stand with your project this week?",
     system_prompt: `You are Michael Chen, the CEO and founder of the company, receiving a weekly project update from the learner. You are busy, time-constrained, and want concise, high-signal updates — progress, risks, and what you need to know or decide. If the learner rambles or is vague, politely but directly ask them to get to the point ("What's the headline here?" / "What do you need from me?"). If they are clear and well-organized, engage constructively and ask one or two sharp follow-up questions. This is an advanced-level roleplay — a real CEO's time pressure and directness should come through. ${REALTIME_STYLE_NOTE}`,
+    briefing_en:
+      "Michael Chen, your CEO, has only about ten minutes and wants a concise status update on your project — not a play-by-play. Before you start, boil your week down to three things: what's on track, what's at risk, and what (if anything) you need from him. Practicing saying this in under a minute will match the pace he expects.",
+    briefing_ja:
+      "CEOのMichael Chenさんは10分ほどしか時間がなく、細かい経緯ではなく要点だけの進捗報告を求めています。話す前に、今週の内容を「順調な点」「懸念点」「彼に求めるサポート(あれば)」の3つに絞っておきましょう。1分程度で話せるよう練習しておくと、求められるテンポに合わせやすくなります。",
   },
   {
     slug: "budget-pitch",
@@ -447,6 +471,10 @@ const scenarios = [
     opening_line:
       "Alright, I've got about ten minutes. Walk me through why this deserves budget over everything else competing for it right now.",
     system_prompt: `You are Victoria Adeyemi, a British-Nigerian CFO who is skeptical but fair. The learner is pitching you on approving budget for their project. You are busy, numbers-focused, and unconvinced by default — push back with pointed but fair questions about ROI, cost, risk, and why this should be prioritized over other things competing for budget. If the learner gives a genuinely strong, specific answer, acknowledge it and soften a bit; if they're vague or hand-wavy, keep pressing. This is a challenging, high-stakes roleplay — react like a real executive evaluating a pitch would. ${REALTIME_STYLE_NOTE}`,
+    briefing_en:
+      "Victoria Adeyemi, your CFO, gives you about ten minutes to make the case for why your project deserves budget over everything else competing for it. She's numbers-driven and skeptical by default, so vague enthusiasm won't land. Before you start, prepare your strongest 2-3 data points or ROI arguments, and anticipate her likely pushback — what would make her say no, and how would you respond?",
+    briefing_ja:
+      "CFOのVictoria Adeyemiさんから、他の競合案件を差し置いてなぜこのプロジェクトに予算をつけるべきか、10分程度で説明する機会が与えられます。彼女は数字に厳しく、基本的に懐疑的な姿勢で臨んできます。話す前に、最も説得力のあるデータやROI(投資対効果)の根拠を2〜3個準備し、想定される反論(なぜ却下されうるか)とその返答も考えておきましょう。",
   },
   {
     slug: "performance-review",
@@ -483,6 +511,10 @@ const scenarios = [
     opening_line:
       "The board meeting is next week, so let's make sure your section is airtight. Walk me through what you're planning to present.",
     system_prompt: `You are Grace Whitfield, the learner's boss and a business unit leader preparing to present to the board next week, using material the learner is responsible for. You are demanding about clarity and precision — pushing back on anything vague, unsupported by data, or likely to draw hard questions from the board. Ask pointed questions about risks, numbers, and how the learner would answer likely board questions. Acknowledge when something is genuinely board-ready. This is an advanced-level roleplay. ${REALTIME_STYLE_NOTE}`,
+    briefing_en:
+      "Grace Whitfield, your manager, is prepping with you ahead of next week's board meeting, where your area will be presented. She's detail-oriented and wants your section to be airtight before then. Before you start, think through how you'd summarize your work in a few clear sentences, and what tough questions a board member might ask that you should be ready for.",
+    briefing_ja:
+      "上司のGrace Whitfieldさんと、来週の取締役会に向けた準備ミーティングです。取締役会ではあなたの担当領域について報告される予定で、彼女は細部への要求が厳しいタイプです。話す前に、自分の担当内容を簡潔な数文でまとめる練習をし、取締役から聞かれそうな厳しい質問への準備もしておきましょう。",
   },
   {
     slug: "cross-department-priority-alignment",
@@ -501,6 +533,10 @@ const scenarios = [
     opening_line:
       "I know we're both fighting for the same engineering resources this quarter, so let's just be direct about what each of us actually needs.",
     system_prompt: `You are Marcus Webb, a director from another department, in a meeting (with a shared leadership stakeholder present) to align on competing priorities for limited shared resources (engineering time, budget, or similar) with the learner. You advocate firmly for your own team's priorities, but you are professional and open to a fair compromise if the learner makes a well-reasoned case. Push back on vague justifications, and try to find a workable trade-off by the end of the conversation. This is an advanced-level roleplay. ${REALTIME_STYLE_NOTE}`,
+    briefing_en:
+      "Marcus Webb, a director from another department, is competing with your team for the same limited engineering resources this quarter — and leadership is in the room. He opens by saying he wants both sides to be direct about what they actually need. Before you start, clarify your own priorities: what does your team truly need versus what would just be nice to have, so you can negotiate rather than just defend territory.",
+    briefing_ja:
+      "他部門のディレクターであるMarcus Webbさんと、今四半期の限られたエンジニアリングリソースを巡って競合する立場での会議です。経営層も同席しています。彼は最初から、お互い本当に必要なものについて率直に話そうと切り出してきます。話す前に、自チームの優先順位を整理し、「本当に必要なもの」と「あれば嬉しい程度のもの」を区別しておきましょう。単なる主張のぶつけ合いではなく、交渉として臨めるようになります。",
   },
 ];
 

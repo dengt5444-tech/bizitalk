@@ -11,6 +11,7 @@ import {
   CUSTOM_TOPIC_MAX_LENGTH,
   FREE_TALK_SLUG,
   MAX_TURNS_PER_SESSION,
+  SUGGESTED_FEEDBACK_TURN,
 } from "@/lib/conversation";
 import { Avatar } from "@/components/Avatar";
 import { FeedbackPanel } from "@/components/FeedbackPanel";
@@ -28,6 +29,10 @@ type ScenarioInfo = {
 type Phase = "idle" | "connecting" | "chatting" | "ended";
 type Mode = "realtime" | "text";
 type Hint = { reply: string; gloss: string };
+
+// A flagged speech segment shorter than this is treated as noise, not a
+// real (if brief) reply — see the speech_started/stopped handling below.
+const MIN_SPEECH_DURATION_MS = 350;
 
 interface SpeechRecognitionAlternative {
   transcript: string;
@@ -155,6 +160,7 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
   }, [guidedMode]);
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const voiceTranscriptRef = useRef<HTMLDivElement | null>(null);
   const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
   const speechSupported = useSyncExternalStore(
     noopSubscribe,
@@ -172,14 +178,30 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
   const pcRef = useRef<RTCPeerConnection | null>(null);
   const dcRef = useRef<RTCDataChannel | null>(null);
   const micStreamRef = useRef<MediaStream | null>(null);
-  // Whether the model currently has an in-flight spoken response. Used to
-  // implement barge-in: without this, when the learner starts talking over
-  // the AI, nothing tells the model to stop — it keeps generating (and once
-  // done, the server's turn detection immediately starts yet another
-  // response to the learner's speech), so the conversation just plows
-  // forward on its own instead of actually listening. A ref, not state,
-  // since dc.onmessage needs to read it synchronously as events arrive.
-  const responseActiveRef = useRef(false);
+  // Mirrors `assistantSpeaking` in a ref so dc.onmessage can read it
+  // synchronously (state updates aren't visible mid-handler). Used for
+  // barge-in: without this, when the learner starts talking over the AI,
+  // nothing tells the model to stop — it keeps generating (and once done,
+  // the server's turn detection immediately starts yet another response),
+  // so the conversation just plows forward on its own instead of actually
+  // listening. Driven by the transcript delta/done events specifically
+  // (rather than a separate response.created/response.done-based flag)
+  // because those are the same events already used for the on-screen
+  // "AI is speaking" indicator, so this can't drift out of sync with what
+  // the learner is actually seeing/hearing.
+  const assistantSpeakingRef = useRef(false);
+  // input_audio_buffer.speech_started/stopped don't carry any content —
+  // just "the learner started/stopped making sound" — and the realtime
+  // transcription model (Whisper-family) is known to occasionally
+  // hallucinate a phantom phrase from a brief noise blip instead of
+  // returning nothing. A hallucinated line then gets treated as a real
+  // turn and the AI replies to it, which is what makes the conversation
+  // look like it's continuing on its own even though the learner never
+  // said anything. Tracking how long the flagged "speech" actually lasted
+  // lets the transcription-completed handler below discard results for
+  // implausibly short blips instead of trusting the transcript blindly.
+  const lastSpeechStartedAtRef = useRef<number | null>(null);
+  const lastSpeechDurationMsRef = useRef(0);
   // The session is created with a seeded opening-line message already shown
   // on screen (so it renders instantly, without waiting on the model). The
   // realtime API is then asked to actually speak that same line; this flag
@@ -194,6 +216,7 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
   );
 
   const turnLimitReached = turnCount >= MAX_TURNS_PER_SESSION;
+  const feedbackSuggested = turnCount >= SUGGESTED_FEEDBACK_TURN;
 
   useEffect(() => {
     return () => {
@@ -201,6 +224,14 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
       closeRealtimeConnection();
     };
   }, []);
+
+  // Keeps the realtime voice screen's transcript pinned to the newest line
+  // as the conversation grows, the way any chat view should.
+  useEffect(() => {
+    const el = voiceTranscriptRef.current;
+    if (!el) return;
+    el.scrollTop = el.scrollHeight;
+  }, [messages]);
 
   function closeRealtimeConnection() {
     try {
@@ -386,13 +417,14 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
       switch (msg.type) {
         case "input_audio_buffer.speech_started":
           setUserSpeaking(true);
+          lastSpeechStartedAtRef.current = Date.now();
           // Barge-in: the learner started talking while the AI still has a
           // response in flight. Cancel it immediately instead of letting it
           // run to completion and then auto-starting yet another turn —
           // that pile-up is what makes the conversation feel like it's
           // running away on its own.
-          if (responseActiveRef.current) {
-            responseActiveRef.current = false;
+          if (assistantSpeakingRef.current) {
+            assistantSpeakingRef.current = false;
             setAssistantSpeaking(false);
             try {
               dcRef.current?.send(JSON.stringify({ type: "response.cancel" }));
@@ -403,26 +435,33 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
           break;
         case "input_audio_buffer.speech_stopped":
           setUserSpeaking(false);
-          break;
-        case "response.created":
-          responseActiveRef.current = true;
+          lastSpeechDurationMsRef.current = lastSpeechStartedAtRef.current
+            ? Date.now() - lastSpeechStartedAtRef.current
+            : 0;
+          lastSpeechStartedAtRef.current = null;
           break;
         case "response.output_audio_transcript.delta":
         case "response.audio_transcript.delta":
+          assistantSpeakingRef.current = true;
           setAssistantSpeaking(true);
           break;
         case "response.output_audio_transcript.done":
         case "response.audio_transcript.done":
+          assistantSpeakingRef.current = false;
           setAssistantSpeaking(false);
           if (typeof msg.transcript === "string") {
             appendRealtimeTurn("assistant", msg.transcript.trim(), msg.item_id);
           }
           break;
-        case "response.done":
-          responseActiveRef.current = false;
-          break;
         case "conversation.item.input_audio_transcription.completed":
-          if (typeof msg.transcript === "string") {
+          // A very short flagged "speech" segment is much more likely to be
+          // a noise blip that the transcription model hallucinated text for
+          // than a real word — discard it instead of letting it silently
+          // turn into a fake conversation turn the AI then replies to.
+          if (
+            typeof msg.transcript === "string" &&
+            lastSpeechDurationMsRef.current >= MIN_SPEECH_DURATION_MS
+          ) {
             appendRealtimeTurn("user", msg.transcript.trim(), msg.item_id);
           }
           break;
@@ -683,7 +722,6 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
   }
 
   const showVoiceScreen = mode === "realtime" && (phase === "connecting" || phase === "chatting");
-  const latestTurn = messages[messages.length - 1];
   const orbState: OrbState = turnLimitReached
     ? "muted"
     : phase === "connecting"
@@ -791,7 +829,7 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
         <div className="flex flex-col">
           <div className="flex items-center justify-between border-b border-line-soft px-5 py-3">
             <p className="text-xs font-medium text-ink-faint">
-              ターン {turnCount} / {MAX_TURNS_PER_SESSION}
+              ターン {turnCount}
             </p>
             <label className="flex items-center gap-1.5 text-xs text-ink-faint">
               <input
@@ -842,10 +880,16 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
             </div>
           )}
 
-          {turnLimitReached && (
+          {turnLimitReached ? (
             <p className="px-5 text-sm font-medium text-signal">
-              このセッションの会話上限に達しました。下のボタンでフィードバックを見てみましょう。
+              長い会話になりました。下のボタンでフィードバックを見てみましょう。
             </p>
+          ) : (
+            feedbackSuggested && (
+              <p className="px-5 text-sm text-ink-soft">
+                十分に話せていますね。もう少し続けても、いつでも下のボタンでフィードバックを見てもOKです。
+              </p>
+            )
           )}
           {error && <p className="px-5 text-sm text-rose">{error}</p>}
 
@@ -936,9 +980,7 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
             <Avatar name={scenario.personaName} size="sm" />
             <div>
               <p className="font-display text-sm font-semibold text-ink">{scenario.personaName}</p>
-              <p className="text-xs text-ink-faint">
-                ターン {turnCount} / {MAX_TURNS_PER_SESSION}
-              </p>
+              <p className="text-xs text-ink-faint">ターン {turnCount}</p>
             </div>
           </div>
           {guidedMode && (
@@ -949,32 +991,66 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
           )}
         </div>
 
-        <div className="flex flex-1 flex-col items-center justify-center gap-7 px-6">
+        <div className="flex min-h-0 flex-1 flex-col items-center gap-4 px-6 pt-4">
           <VoiceOrb state={orbState} />
-          {phase === "connecting" ? (
+          {phase === "connecting" && (
             <p className="text-sm font-medium text-signal">
               {scenario.personaName}さんに接続しています...
             </p>
-          ) : (
-            latestTurn && (
-              <div className="max-w-md text-center">
-                <p className="text-xs font-medium tracking-wide text-ink-faint uppercase">
-                  {latestTurn.role === "assistant" ? scenario.personaName : "あなた"}
-                </p>
-                <p className="mt-1.5 text-lg font-medium text-ink">{latestTurn.text}</p>
-              </div>
-            )
           )}
+          {/* Full running transcript rather than only the latest line, so
+              the learner can scroll back through what's already been said
+              instead of losing it the moment the next turn arrives. */}
+          <div
+            ref={voiceTranscriptRef}
+            className="w-full max-w-md flex-1 space-y-3 overflow-y-auto pb-2"
+          >
+            {messages.map((message, index) => (
+              <div
+                key={index}
+                className={`flex items-end gap-2 ${message.role === "user" ? "justify-end" : "justify-start"}`}
+              >
+                {message.role === "assistant" && (
+                  <Avatar name={scenario.personaName} size="sm" />
+                )}
+                <div
+                  className={`max-w-[80%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
+                    message.role === "user"
+                      ? "bg-signal text-paper"
+                      : "bg-paper-dim text-ink"
+                  }`}
+                >
+                  {message.text}
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
 
         <div className="mx-auto w-full max-w-md space-y-3 px-5 sm:px-8">
           {guidedMode && phase === "chatting" && (hint || hintLoading) && (
             <HintCard reply={hint?.reply ?? null} gloss={hint?.gloss ?? null} loading={hintLoading} onRefresh={() => fetchHint(transcriptRef.current)} />
           )}
-          {turnLimitReached && (
+          {turnLimitReached ? (
             <p className="text-center text-sm font-medium text-signal">
-              このセッションの会話上限に達しました。下のボタンでフィードバックを見てみましょう。
+              長い会話になりました。下の丸いボタンでフィードバックを見てみましょう。
             </p>
+          ) : (
+            feedbackSuggested &&
+            phase === "chatting" && (
+              <p className="text-center text-sm text-ink-soft">
+                十分に話せていますね。もう少し続けても、
+                <button
+                  type="button"
+                  onClick={handleEnd}
+                  disabled={ending}
+                  className="font-medium text-signal underline decoration-signal/40 underline-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  いつでもフィードバックを見る
+                </button>
+                こともできます。
+              </p>
+            )
           )}
           {error && <p className="text-center text-sm text-rose">{error}</p>}
         </div>
