@@ -11,6 +11,7 @@ import { openBillingPortal, startCheckout, type CheckoutPlan } from "@/lib/check
 import type { ConversationPlan } from "@/lib/entitlements";
 import { ALL_IAP_PRODUCT_IDS, IAP_PRODUCT_ID_FOR_PLAN, verifyApplePurchase } from "@/lib/iap";
 import { useTheme } from "@/theme/ThemeProvider";
+import { FaqList } from "./FaqList";
 import { ReferralCodeField } from "./ReferralCodeField";
 
 const CONVERSATION_MINUTES_PER_MONTH = { trial: 45, standard: 200, unlimited: 450 };
@@ -374,6 +375,8 @@ export function PricingPlans({
           onPress={handleRestorePurchases}
         />
       )}
+
+      <FaqList />
     </View>
   );
 }

@@ -78,7 +78,7 @@ export default function VocabDeckScreen() {
       {unlocked ? (
         <VocabDeckPractice deckTitle={deck.title} words={deck.items} isLoggedIn={!!user} />
       ) : (
-        <LockCard isLoggedIn={!!user} />
+        <LockCard isLoggedIn={!!user} kind="deck" />
       )}
     </ScreenScroll>
   );
