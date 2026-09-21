@@ -1,5 +1,6 @@
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
+import { Headphones, Mic, Sparkles, type LucideIcon } from "lucide-react-native";
 import React, { useCallback, useRef, useState } from "react";
 import { Dimensions, FlatList, Pressable, View, type ViewToken } from "react-native";
 import { Button } from "@/components/ui/Button";
@@ -10,19 +11,19 @@ import { useTheme } from "@/theme/ThemeProvider";
 const { width } = Dimensions.get("window");
 const VIEWABILITY_CONFIG = { itemVisiblePercentThreshold: 60 };
 
-const SLIDES = [
+const SLIDES: { icon: LucideIcon; title: string; description: string }[] = [
   {
-    icon: "🗣️",
+    icon: Mic,
     title: "AIとリアルタイム音声で\n会話練習",
     description: "CEO、海外の同僚、取引先——相手役・シチュエーション別に、実際のビジネスシーンに近い形で話す練習ができます。",
   },
   {
-    icon: "📝",
+    icon: Sparkles,
     title: "会話ごとにAIコーチが\nフィードバック",
     description: "文法・語彙・丁寧さをスコアリングし、良かった表現と直すと良い表現を具体的に教えてくれます。",
   },
   {
-    icon: "📚",
+    icon: Headphones,
     title: "リスニングと単語帳も\n聞き放題・学び放題",
     description: "ビジネス英語のリスニング教材と、テーマ別の単語帳。苦手な単語は自動で復習リストに貯まります。",
   },
@@ -72,7 +73,18 @@ export default function OnboardingScreen() {
           onViewableItemsChanged={onViewableItemsChanged}
           renderItem={({ item }) => (
             <View style={{ width, paddingHorizontal: 36, alignItems: "center", gap: 20 }}>
-              <Text size={64}>{item.icon}</Text>
+              <View
+                style={{
+                  width: 88,
+                  height: 88,
+                  borderRadius: 44,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  backgroundColor: "rgba(255,255,255,0.12)",
+                }}
+              >
+                <item.icon size={40} color={theme.colors.paper} strokeWidth={1.75} />
+              </View>
               <Text
                 variant="display"
                 weight="semibold"

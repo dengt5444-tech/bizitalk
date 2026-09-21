@@ -1,8 +1,10 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { createAudioPlayer, type AudioPlayer } from "expo-audio";
+import { Check, Lightbulb, Mic, MicOff, X } from "lucide-react-native";
 import React, { useEffect, useRef, useState } from "react";
-import { ActivityIndicator, AppState, Pressable, View } from "react-native";
+import { ActivityIndicator, AppState, Modal, Pressable, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Avatar } from "@/components/Avatar";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -15,6 +17,8 @@ import { connectRealtimeVoice, isRealtimeVoiceSupported, type RealtimeController
 import { useTheme } from "@/theme/ThemeProvider";
 import { ChatBubble } from "./ChatBubble";
 import { FeedbackPanel } from "./FeedbackPanel";
+import { HintCard } from "./HintCard";
+import { VoiceOrb, type OrbState } from "./VoiceOrb";
 
 type ScenarioInfo = {
   slug: string;
@@ -26,10 +30,12 @@ type ScenarioInfo = {
 
 type Phase = "idle" | "connecting" | "chatting" | "ended";
 type Mode = "realtime" | "text";
+type Hint = { reply: string; gloss: string };
 
 export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
   const theme = useTheme();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const isFreeTalk = scenario.slug === FREE_TALK_SLUG;
   const supportsRealtime = isRealtimeVoiceSupported();
 
@@ -50,6 +56,13 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
   const [error, setError] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<ConversationFeedback | null>(null);
 
+  // "Guided mode": after each of the AI's turns, offer a concrete example
+  // of what the learner could say back — chosen on the start screen,
+  // works in both realtime voice and text mode.
+  const [guidedMode, setGuidedMode] = useState(false);
+  const [hint, setHint] = useState<Hint | null>(null);
+  const [hintLoading, setHintLoading] = useState(false);
+
   const playerRef = useRef<AudioPlayer | null>(null);
   const realtimeRef = useRef<RealtimeController | null>(null);
   // Tracks connectRealtimeVoice() while it's still negotiating, i.e. before
@@ -62,6 +75,11 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
   const processedIdsRef = useRef<Set<string>>(new Set());
   const openingHandledRef = useRef(false);
   const sessionIdRef = useRef<string | null>(null);
+  const guidedModeRef = useRef(false);
+
+  useEffect(() => {
+    guidedModeRef.current = guidedMode;
+  }, [guidedMode]);
 
   const turnLimitReached = turnCount >= MAX_TURNS_PER_SESSION;
 
@@ -119,6 +137,21 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
     });
   }
 
+  async function fetchHint(transcript: ConversationTurn[]) {
+    const id = sessionIdRef.current;
+    if (!id || !guidedModeRef.current) return;
+    setHintLoading(true);
+    try {
+      const data = await api.post<Hint>(`/api/conversation/sessions/${id}/hint`, { transcript });
+      setHint(data);
+    } catch {
+      // Silent — the hint card just stays empty/previous; guided mode is a
+      // convenience, not something worth interrupting the conversation for.
+    } finally {
+      setHintLoading(false);
+    }
+  }
+
   function appendRealtimeTurn(role: "user" | "assistant", text: string, itemId?: string) {
     if (!text) return;
     if (itemId) {
@@ -144,6 +177,12 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
       realtimeRef.current?.disableFurtherInput();
       setMicMuted(true);
     }
+
+    if (role === "user") {
+      setHint(null);
+    } else {
+      fetchHint(next);
+    }
   }
 
   async function playAudio(index: number) {
@@ -163,6 +202,7 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
     setStarting(true);
     setError(null);
     setMode(chosenMode);
+    setHint(null);
     openingHandledRef.current = false;
     processedIdsRef.current = new Set();
 
@@ -176,6 +216,7 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
       transcriptRef.current = data.transcript;
       setMessages(data.transcript);
       setTurnCount(0);
+      fetchHint(data.transcript);
 
       if (chosenMode === "realtime") {
         setPhase("connecting");
@@ -238,6 +279,7 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
 
     setInputText("");
     setError(null);
+    setHint(null);
 
     if (mode === "realtime" && realtimeRef.current) {
       pushTurn({ role: "user", text });
@@ -250,15 +292,20 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
     }
 
     setSending(true);
-    setMessages((prev) => [...prev, { role: "user", text }]);
+    const withUser = [...transcriptRef.current, { role: "user" as const, text }];
+    transcriptRef.current = withUser;
+    setMessages(withUser);
 
     try {
       const data = await api.post<{ reply: string; assistantIndex: number; turnCount: number }>(
         `/api/conversation/sessions/${sessionId}/messages`,
         { text },
       );
-      setMessages((prev) => [...prev, { role: "assistant", text: data.reply }]);
+      const withReply = [...withUser, { role: "assistant" as const, text: data.reply }];
+      transcriptRef.current = withReply;
+      setMessages(withReply);
       setTurnCount(data.turnCount);
+      fetchHint(withReply);
       if (autoPlay) setTimeout(() => playAudio(data.assistantIndex), 150);
     } catch {
       setError("メッセージを送信できませんでした。もう一度お試しください。");
@@ -311,6 +358,7 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
     setError(null);
     setCustomTopic("");
     setMicMuted(false);
+    setHint(null);
   }
 
   if (phase === "idle") {
@@ -337,6 +385,33 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
               multiline
             />
           </View>
+        )}
+
+        <Pressable
+          onPress={() => setGuidedMode((v) => !v)}
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 8,
+            alignSelf: "stretch",
+            borderRadius: 999,
+            borderWidth: 1,
+            borderColor: guidedMode ? theme.colors.signal : theme.colors.line,
+            backgroundColor: guidedMode ? theme.colors.signalTint : "transparent",
+            paddingVertical: 11,
+          }}
+        >
+          <Lightbulb size={16} color={guidedMode ? theme.colors.signal : theme.colors.inkFaint} strokeWidth={2} />
+          <Text size={13} weight="medium" color={guidedMode ? "signal" : "inkSoft"}>
+            ガイド付きで練習する
+          </Text>
+          {guidedMode && <Check size={15} color={theme.colors.signal} strokeWidth={2.5} />}
+        </Pressable>
+        {guidedMode && (
+          <Text size={11} color="inkFaint" style={{ textAlign: "center", marginTop: -6 }}>
+            相手が話すたびに「こう言ってみましょう」という返答例が表示されます。
+          </Text>
         )}
 
         <View style={{ gap: 10, alignSelf: "stretch" }}>
@@ -371,21 +446,165 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
     );
   }
 
-  if (phase === "connecting") {
-    return (
-      <Card style={{ alignItems: "center", gap: 10, paddingVertical: 32 }}>
-        <Avatar name={scenario.personaName} size="lg" />
-        <Text weight="medium" color="signal">
-          {scenario.personaName}さんに接続しています...
-        </Text>
-        <Text size={12} color="inkFaint">
-          マイクの使用を許可してください。
-        </Text>
-      </Card>
-    );
+  const showVoiceScreen = mode === "realtime" && (phase === "connecting" || phase === "chatting");
+  const latestTurn = messages[messages.length - 1];
+  const orbState: OrbState = turnLimitReached
+    ? "muted"
+    : phase === "connecting"
+      ? "connecting"
+      : micMuted
+        ? "muted"
+        : assistantSpeaking
+          ? "assistant"
+          : userSpeaking
+            ? "user"
+            : "idle";
+
+  const voiceScreen = (
+    <Modal visible={showVoiceScreen} animationType="fade" onRequestClose={() => {}}>
+      <View style={{ flex: 1, backgroundColor: theme.colors.paper }}>
+        <View
+          style={{
+            paddingTop: insets.top + 12,
+            paddingHorizontal: 20,
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "space-between",
+          }}
+        >
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+            <Avatar name={scenario.personaName} size="sm" />
+            <View>
+              <Text weight="semibold" size={14}>
+                {scenario.personaName}
+              </Text>
+              <Text size={11} color="inkFaint">
+                ターン {turnCount} / {MAX_TURNS_PER_SESSION}
+              </Text>
+            </View>
+          </View>
+          {guidedMode && (
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 6,
+                backgroundColor: theme.colors.signalTint,
+                borderRadius: 999,
+                paddingHorizontal: 10,
+                paddingVertical: 5,
+              }}
+            >
+              <Lightbulb size={13} color={theme.colors.signal} strokeWidth={2} />
+              <Text size={11} weight="medium" color="signal">
+                ガイド付き
+              </Text>
+            </View>
+          )}
+        </View>
+
+        <View style={{ flex: 1, alignItems: "center", justifyContent: "center", gap: 28, paddingHorizontal: 28 }}>
+          <VoiceOrb state={orbState} />
+          {phase === "connecting" ? (
+            <Text weight="medium" color="signal">
+              {scenario.personaName}さんに接続しています...
+            </Text>
+          ) : (
+            latestTurn && (
+              <View style={{ gap: 6, alignItems: "center" }}>
+                <Text size={11} color="inkFaint" eyebrow>
+                  {latestTurn.role === "assistant" ? scenario.personaName : "あなた"}
+                </Text>
+                <Text size={17} weight="medium" style={{ textAlign: "center", lineHeight: 24 }}>
+                  {latestTurn.text}
+                </Text>
+              </View>
+            )
+          )}
+        </View>
+
+        <View style={{ paddingHorizontal: 20, gap: 10 }}>
+          {guidedMode && phase === "chatting" && (hint || hintLoading) && (
+            <HintCard
+              reply={hint?.reply ?? null}
+              gloss={hint?.gloss ?? null}
+              loading={hintLoading}
+              onRefresh={() => fetchHint(transcriptRef.current)}
+            />
+          )}
+          {turnLimitReached && (
+            <Text size={13} weight="medium" color="signal" style={{ textAlign: "center" }}>
+              このセッションの会話上限に達しました。下のボタンでフィードバックを見てみましょう。
+            </Text>
+          )}
+          {!!error && (
+            <Text size={13} color="rose" style={{ textAlign: "center" }}>
+              {error}
+            </Text>
+          )}
+        </View>
+
+        <View
+          style={{
+            paddingHorizontal: 20,
+            paddingTop: 12,
+            paddingBottom: insets.bottom + 16,
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 10,
+          }}
+        >
+          <Input
+            value={inputText}
+            onChangeText={setInputText}
+            placeholder="マイクで話すか、代わりにここに入力できます"
+            editable={!turnLimitReached}
+            style={{ flex: 1 }}
+          />
+          <Pressable
+            onPress={handleMicMuteToggle}
+            disabled={turnLimitReached || phase !== "chatting"}
+            style={{
+              width: 46,
+              height: 46,
+              borderRadius: 23,
+              alignItems: "center",
+              justifyContent: "center",
+              backgroundColor: micMuted ? theme.colors.roseTint : theme.colors.paperDim,
+              opacity: turnLimitReached || phase !== "chatting" ? 0.4 : 1,
+            }}
+          >
+            {micMuted ? (
+              <MicOff size={20} color={theme.colors.rose} strokeWidth={2} />
+            ) : (
+              <Mic size={20} color={theme.colors.inkSoft} strokeWidth={2} />
+            )}
+          </Pressable>
+          <Pressable
+            onPress={handleEnd}
+            disabled={ending || turnCount < 1}
+            style={{
+              width: 46,
+              height: 46,
+              borderRadius: 23,
+              alignItems: "center",
+              justifyContent: "center",
+              backgroundColor: theme.colors.ink,
+              opacity: ending || turnCount < 1 ? 0.4 : 1,
+            }}
+          >
+            {ending ? <ActivityIndicator size="small" color={theme.colors.paper} /> : <X size={20} color={theme.colors.paper} strokeWidth={2} />}
+          </Pressable>
+        </View>
+      </View>
+    </Modal>
+  );
+
+  if (phase === "connecting" || (phase === "chatting" && mode === "realtime")) {
+    return voiceScreen;
   }
 
-  if (phase === "chatting") {
+  if (phase === "chatting" && mode === "text") {
     return (
       <View style={{ borderRadius: theme.radius.md, borderWidth: 1, borderColor: theme.colors.line, overflow: "hidden" }}>
         <View
@@ -401,29 +620,17 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
         >
           <Text size={12} color="inkFaint">
             ターン {turnCount} / {MAX_TURNS_PER_SESSION}
-            {mode === "realtime" && assistantSpeaking && (
-              <Text size={12} color="signal">
-                {" "}話しています...
-              </Text>
-            )}
-            {mode === "realtime" && userSpeaking && (
-              <Text size={12} color="amber">
-                {" "}聞いています...
-              </Text>
-            )}
           </Text>
-          {mode === "text" && (
-            <Pressable onPress={() => setAutoPlay((v) => !v)} style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-              <Ionicons
-                name={autoPlay ? "volume-high-outline" : "volume-mute-outline"}
-                size={16}
-                color={theme.colors.inkFaint}
-              />
-              <Text size={11} color="inkFaint">
-                音声を自動再生
-              </Text>
-            </Pressable>
-          )}
+          <Pressable onPress={() => setAutoPlay((v) => !v)} style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+            <Ionicons
+              name={autoPlay ? "volume-high-outline" : "volume-mute-outline"}
+              size={16}
+              color={theme.colors.inkFaint}
+            />
+            <Text size={11} color="inkFaint">
+              音声を自動再生
+            </Text>
+          </Pressable>
         </View>
 
         <View style={{ padding: 16, gap: 10 }}>
@@ -432,7 +639,7 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
               <View style={{ flex: 1 }}>
                 <ChatBubble turn={message} personaName={scenario.personaName} />
               </View>
-              {message.role === "assistant" && mode === "text" && (
+              {message.role === "assistant" && (
                 <Pressable onPress={() => playAudio(index)} hitSlop={8}>
                   <Ionicons name="play-circle-outline" size={20} color={theme.colors.inkFaint} />
                 </Pressable>
@@ -440,6 +647,17 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
             </View>
           ))}
         </View>
+
+        {guidedMode && (hint || hintLoading) && (
+          <View style={{ paddingHorizontal: 16, paddingBottom: 12 }}>
+            <HintCard
+              reply={hint?.reply ?? null}
+              gloss={hint?.gloss ?? null}
+              loading={hintLoading}
+              onRefresh={() => fetchHint(transcriptRef.current)}
+            />
+          </View>
+        )}
 
         {turnLimitReached && (
           <Text size={13} weight="medium" color="signal" style={{ paddingHorizontal: 16 }}>
@@ -454,27 +672,10 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
 
         <View style={{ borderTopWidth: 1, borderTopColor: theme.colors.lineSoft, padding: 14, gap: 10 }}>
           <View style={{ flexDirection: "row", gap: 8, alignItems: "flex-end" }}>
-            {mode === "realtime" && (
-              <Pressable
-                onPress={handleMicMuteToggle}
-                disabled={turnLimitReached}
-                style={{
-                  borderRadius: 999,
-                  paddingHorizontal: 14,
-                  paddingVertical: 12,
-                  backgroundColor: micMuted ? theme.colors.roseTint : theme.colors.paperDim,
-                  opacity: turnLimitReached ? 0.4 : 1,
-                }}
-              >
-                <Text size={13} weight="medium" color={micMuted ? "rose" : "inkSoft"}>
-                  {micMuted ? "ミュート中" : "話す"}
-                </Text>
-              </Pressable>
-            )}
             <Input
               value={inputText}
               onChangeText={setInputText}
-              placeholder={mode === "realtime" ? "マイクで話すか、代わりにここに入力できます" : "英語で入力してください"}
+              placeholder="英語で入力してください"
               editable={!turnLimitReached}
               multiline
               style={{ flex: 1 }}

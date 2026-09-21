@@ -1,4 +1,5 @@
 import { Redirect, useRouter } from "expo-router";
+import { BookMarked, Mic, Sparkles, type LucideIcon } from "lucide-react-native";
 import React, { useEffect, useState } from "react";
 import { View } from "react-native";
 import { Badge } from "@/components/ui/Badge";
@@ -11,20 +12,20 @@ import { useAuth } from "@/context/AuthProvider";
 import { hasSeenOnboarding } from "@/lib/onboarding";
 import { useTheme } from "@/theme/ThemeProvider";
 
-const FEATURES = [
+const FEATURES: { icon: LucideIcon; title: string; description: string }[] = [
   {
-    icon: "🗣️",
+    icon: Mic,
     title: "AIとリアルタイム音声で会話練習",
     description:
       "CEO、海外の同僚、取引先——相手役・シチュエーション別に、実際のビジネスシーンに近い形で英語を話す練習ができます。",
   },
   {
-    icon: "📝",
+    icon: Sparkles,
     title: "会話ごとのAIコーチによるフィードバック",
     description: "文法・語彙・丁寧さをスコアリングし、改善点と良かった表現を具体的に教えてくれます。",
   },
   {
-    icon: "📚",
+    icon: BookMarked,
     title: "苦手単語の復習リスト",
     description: "会話や単語帳で出てきた単語を自動で保存。「復習」タブでいつでも見返せます。",
   },
@@ -91,8 +92,19 @@ export default function HomeScreen() {
           Features
         </Text>
         {FEATURES.map((feature) => (
-          <Card key={feature.title} style={{ gap: 6 }}>
-            <Text size={22}>{feature.icon}</Text>
+          <Card key={feature.title} style={{ gap: 10 }}>
+            <View
+              style={{
+                width: 40,
+                height: 40,
+                borderRadius: 20,
+                alignItems: "center",
+                justifyContent: "center",
+                backgroundColor: theme.colors.signalTint,
+              }}
+            >
+              <feature.icon size={20} color={theme.colors.signal} strokeWidth={1.75} />
+            </View>
             <Text weight="semibold" size={16}>
               {feature.title}
             </Text>
