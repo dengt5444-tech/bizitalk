@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/entitlements";
 import { Avatar } from "@/components/Avatar";
+import { DangerZone } from "@/components/DangerZone";
 import type { ConversationFeedback } from "@/lib/conversation";
 
 export const dynamic = "force-dynamic";
@@ -238,6 +239,10 @@ export default async function DashboardPage() {
             </ul>
           )}
         </section>
+      </div>
+
+      <div className="mt-12">
+        <DangerZone />
       </div>
     </main>
   );

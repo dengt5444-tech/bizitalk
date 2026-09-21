@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { getAuthedClient } from "@/lib/supabase/api";
 import { createOpenAIClient, FEEDBACK_MODEL } from "@/lib/openai";
 import { MAX_SESSION_DURATION_SECONDS } from "@/lib/limits";
 import type { ConversationFeedback, ConversationTurn } from "@/lib/conversation";
@@ -34,10 +34,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { supabase, user } = await getAuthedClient();
 
   if (!user) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });

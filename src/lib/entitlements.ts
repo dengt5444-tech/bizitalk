@@ -1,5 +1,14 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
+import { planForAppleProductId } from "@/lib/apple/config";
 
+// Table-query functions below accept an optional already-resolved Supabase
+// client so callers that have one — API routes using getAuthedClient() for
+// a mobile bearer-token request, mainly — can pass it through instead of
+// this module creating its own cookie-based client, which would carry no
+// session on a bearer-token request and get blocked by RLS. Server
+// Components never had a client to pass, so they keep omitting it and get
+// the same cookie-based lookup as before.
 const ACTIVE_STATUSES = new Set(["active", "trialing"]);
 
 const ADMIN_EMAILS = new Set(
@@ -37,31 +46,44 @@ function conversationPlanForPriceId(
   return null;
 }
 
-async function activeConversationPriceId(userId: string) {
-  const supabase = await createClient();
+// A row can come from either payment provider — `source` says which one is
+// current, so only that provider's identifier column is trusted. (The
+// other column may hold a stale value from before a switch: e.g. a user
+// who bought via Stripe on the web, then later subscribed through the iOS
+// app, still has their old price_id sitting there untouched, since each
+// provider's webhook/sync path only overwrites its own columns.)
+async function activeConversationPlanRow(userId: string, supabase: SupabaseClient) {
   const { data } = await supabase
     .from("subscriptions")
-    .select("status, price_id")
+    .select("status, source, price_id, apple_product_id")
     .eq("user_id", userId)
     .maybeSingle();
 
   if (!data || !ACTIVE_STATUSES.has(data.status)) return null;
-  return data.price_id as string | null;
+  return data;
 }
 
 /**
  * Which AI conversation tier (if any) this user has an active
  * subscription to. Returns "admin" for the ADMIN_EMAILS allowlist (full
- * access, no Stripe subscription needed), a tier name for a real paying
- * subscriber, or null if they have none.
+ * access, no subscription needed), a tier name for a real paying
+ * subscriber (via Stripe or Apple in-app purchase), or null if they have
+ * none.
  */
 export async function getConversationPlan(
   user: { id: string; email?: string | null } | null | undefined,
+  supabase?: SupabaseClient,
 ): Promise<ConversationPlan | "admin" | null> {
   if (!user) return null;
   if (isAdminEmail(user.email)) return "admin";
-  const priceId = await activeConversationPriceId(user.id);
-  return conversationPlanForPriceId(priceId);
+  const row = await activeConversationPlanRow(user.id, supabase ?? (await createClient()));
+  if (!row) return null;
+  if (row.source === "apple_iap") {
+    // Never "listening" here — Apple purchases for that plan are routed to
+    // gakuto_subscriptions instead, same as Stripe's.
+    return planForAppleProductId(row.apple_product_id) as ConversationPlan | null;
+  }
+  return conversationPlanForPriceId(row.price_id);
 }
 
 /**
@@ -71,8 +93,9 @@ export async function getConversationPlan(
  */
 export async function isEntitled(
   user: { id: string; email?: string | null } | null | undefined,
+  supabase?: SupabaseClient,
 ) {
-  return (await getConversationPlan(user)) !== null;
+  return (await getConversationPlan(user, supabase)) !== null;
 }
 
 // The listening (business-listening materials) plan is tracked in the
@@ -80,8 +103,7 @@ export async function isEntitled(
 // Bijirisu uses) when bought standalone, but it's also bundled into every
 // AI conversation tier (trial/standard/unlimited) — only the pure listening
 // plan is a genuinely separate purchase.
-export async function hasActiveListeningSubscription(userId: string) {
-  const supabase = await createClient();
+export async function hasActiveListeningSubscription(userId: string, supabase: SupabaseClient) {
   const { data } = await supabase
     .from("gakuto_subscriptions")
     .select("status")
@@ -93,9 +115,11 @@ export async function hasActiveListeningSubscription(userId: string) {
 
 export async function isListeningEntitled(
   user: { id: string; email?: string | null } | null | undefined,
+  supabase?: SupabaseClient,
 ) {
   if (!user) return false;
   if (isAdminEmail(user.email)) return true;
-  if (await hasActiveListeningSubscription(user.id)) return true;
-  return (await getConversationPlan(user)) !== null;
+  const client = supabase ?? (await createClient());
+  if (await hasActiveListeningSubscription(user.id, client)) return true;
+  return (await getConversationPlan(user, client)) !== null;
 }

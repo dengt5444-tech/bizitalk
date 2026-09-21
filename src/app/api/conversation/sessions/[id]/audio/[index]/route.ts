@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { getAuthedClient } from "@/lib/supabase/api";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createOpenAIClient, TTS_MODEL } from "@/lib/openai";
 import type { ConversationTurn } from "@/lib/conversation";
@@ -17,10 +17,7 @@ export async function GET(
     return NextResponse.json({ error: "invalid_index" }, { status: 400 });
   }
 
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { supabase, user } = await getAuthedClient();
 
   if (!user) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });

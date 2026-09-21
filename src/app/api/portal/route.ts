@@ -1,12 +1,11 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { getAuthedClient } from "@/lib/supabase/api";
 import { createStripeClient } from "@/lib/stripe";
 
+const MOBILE_RETURN_URL = "bizitalk://portal-return";
+
 export async function POST(request: Request) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { supabase, user } = await getAuthedClient();
 
   if (!user) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
@@ -30,7 +29,7 @@ export async function POST(request: Request) {
 
   const session = await stripe.billingPortal.sessions.create({
     customer: subscription.stripe_customer_id,
-    return_url: `${siteUrl}/pricing`,
+    return_url: body?.mobileReturn === true ? MOBILE_RETURN_URL : `${siteUrl}/pricing`,
   });
 
   return NextResponse.json({ url: session.url });

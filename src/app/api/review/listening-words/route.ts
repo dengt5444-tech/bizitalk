@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { getAuthedClient } from "@/lib/supabase/api";
 
 // Saved words from the listening-materials feature live in the shared
 // Supabase project's own gakuto_saved_words table (the same table Bijirisu
@@ -7,10 +7,7 @@ import { createClient } from "@/lib/supabase/server";
 // conversation vocab) since they're different products with different
 // entitlements.
 export async function POST(request: Request) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { supabase, user } = await getAuthedClient();
 
   if (!user) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
