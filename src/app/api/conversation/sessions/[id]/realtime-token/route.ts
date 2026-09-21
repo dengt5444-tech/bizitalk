@@ -91,9 +91,23 @@ export async function POST(
               // "low" eagerness makes the model more patient about deciding
               // the learner has actually started/finished talking, instead
               // of reacting to every brief noise blip or mic echo of its
-              // own voice — which is what made the conversation look like
-              // it was progressing on its own without the learner speaking.
-              turn_detection: { type: "semantic_vad", eagerness: "low" },
+              // own voice.
+              //
+              // create_response: false is the actual fix for the AI replying
+              // to things the learner never said. By default the server
+              // auto-generates a reply the instant it decides the learner's
+              // turn ended — including for a turn triggered by a noise blip
+              // or the AI hearing its own voice through the speakers, whose
+              // transcript then comes back empty or garbled. The client used
+              // to filter that bad transcript out of the on-screen log, but
+              // the server had already started talking by then regardless of
+              // what got shown, which is what made the conversation look
+              // like it was continuing on its own. With this off, nothing
+              // makes the AI speak except an explicit response.create sent
+              // from the client (see ConversationRoom.tsx), which only
+              // happens after the transcript has passed those same checks —
+              // so unvalidated audio can no longer produce a reply at all.
+              turn_detection: { type: "semantic_vad", eagerness: "low", create_response: false },
             },
           },
         },

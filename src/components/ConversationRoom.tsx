@@ -228,6 +228,16 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
   // implausibly short blips instead of trusting the transcript blindly.
   const lastSpeechStartedAtRef = useRef<number | null>(null);
   const lastSpeechDurationMsRef = useRef(0);
+  // Barge-in used to cancel the AI's in-flight response the instant any
+  // speech_started event fired — including ones caused by a noise blip or
+  // the AI hearing its own echo. That cut the AI off mid-sentence for no
+  // real reason, and since automatic response creation is now disabled
+  // (see realtime-token/route.ts), nothing would prompt a new reply
+  // afterward — the conversation would just go silent. This timer delays
+  // the actual cancel until the detected speech has lasted at least
+  // MIN_SPEECH_DURATION_MS, the same bar used to trust a transcript, so a
+  // blip that stops before then never interrupts the AI at all.
+  const bargeInTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // The session is created with a seeded opening-line message already shown
   // on screen (so it renders instantly, without waiting on the model). The
   // realtime API is then asked to actually speak that same line; this flag
@@ -260,6 +270,10 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
   }, [messages]);
 
   function closeRealtimeConnection() {
+    if (bargeInTimerRef.current) {
+      clearTimeout(bargeInTimerRef.current);
+      bargeInTimerRef.current = null;
+    }
     try {
       dcRef.current?.close();
     } catch {
@@ -456,22 +470,36 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
           setUserSpeaking(true);
           lastSpeechStartedAtRef.current = Date.now();
           // Barge-in: the learner started talking while the AI still has a
-          // response in flight. Cancel it immediately instead of letting it
-          // run to completion and then auto-starting yet another turn —
-          // that pile-up is what makes the conversation feel like it's
-          // running away on its own.
+          // response in flight. Don't cancel on this event alone though —
+          // it fires for any detected sound, including a brief noise blip
+          // or the AI hearing its own echo, and cutting the AI off for
+          // those was making it go silent for no real reason. Wait until
+          // the speech has actually continued for MIN_SPEECH_DURATION_MS
+          // (the same bar used to trust a transcript) before treating it
+          // as a genuine interruption; a blip that stops before then gets
+          // its timer cleared in speech_stopped below and never cancels
+          // anything.
           if (assistantSpeakingRef.current) {
-            assistantSpeakingRef.current = false;
-            setAssistantSpeaking(false);
-            try {
-              dcRef.current?.send(JSON.stringify({ type: "response.cancel" }));
-            } catch {
-              // ignore — worst case the current response finishes normally
-            }
+            if (bargeInTimerRef.current) clearTimeout(bargeInTimerRef.current);
+            bargeInTimerRef.current = setTimeout(() => {
+              bargeInTimerRef.current = null;
+              if (!assistantSpeakingRef.current) return;
+              assistantSpeakingRef.current = false;
+              setAssistantSpeaking(false);
+              try {
+                dcRef.current?.send(JSON.stringify({ type: "response.cancel" }));
+              } catch {
+                // ignore — worst case the current response finishes normally
+              }
+            }, MIN_SPEECH_DURATION_MS);
           }
           break;
         case "input_audio_buffer.speech_stopped":
           setUserSpeaking(false);
+          if (bargeInTimerRef.current) {
+            clearTimeout(bargeInTimerRef.current);
+            bargeInTimerRef.current = null;
+          }
           lastSpeechDurationMsRef.current = lastSpeechStartedAtRef.current
             ? Date.now() - lastSpeechStartedAtRef.current
             : 0;
@@ -491,24 +519,51 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
           }
           break;
         case "conversation.item.input_audio_transcription.completed": {
-          // A very short flagged "speech" segment is much more likely to be
-          // a noise blip that the transcription model hallucinated text for
-          // than a real word — discard it instead of letting it silently
-          // turn into a fake conversation turn the AI then replies to.
-          if (
-            typeof msg.transcript !== "string" ||
-            lastSpeechDurationMsRef.current < MIN_SPEECH_DURATION_MS
-          ) {
-            break;
-          }
-          const candidate = msg.transcript.trim();
+          // Automatic response generation is turned off server-side (see
+          // realtime-token/route.ts) specifically so that a noise blip or
+          // mic echo can never make the AI speak on its own — the model
+          // only ever replies to a transcript that passes the checks
+          // below, via the explicit response.create calls in this case.
+          // A very short flagged "speech" segment is much more likely to
+          // be a noise blip that the transcription model hallucinated text
+          // for than a real word, and a transcript that's basically a
+          // fragment of what the AI just said is almost certainly its own
+          // voice leaking back into the mic — reject both rather than
+          // trusting them.
+          const candidate = typeof msg.transcript === "string" ? msg.transcript.trim() : "";
           const lastAssistantTurn = [...transcriptRef.current]
             .reverse()
             .find((turn) => turn.role === "assistant");
-          if (lastAssistantTurn && looksLikeSelfEcho(candidate, lastAssistantTurn.text)) {
+          const rejected =
+            !candidate ||
+            lastSpeechDurationMsRef.current < MIN_SPEECH_DURATION_MS ||
+            (lastAssistantTurn && looksLikeSelfEcho(candidate, lastAssistantTurn.text));
+
+          if (rejected) {
+            // The audio was still committed to the model's own conversation
+            // history as an input item the instant speech_stopped fired,
+            // before this transcript (and thus this rejection) was even
+            // known — left alone, that noise/echo would still sit in the
+            // context the next real reply is generated from. Deleting it
+            // keeps the model's view of the conversation clean.
+            if (msg.item_id) {
+              try {
+                dcRef.current?.send(
+                  JSON.stringify({ type: "conversation.item.delete", item_id: msg.item_id }),
+                );
+              } catch {
+                // ignore — worst case one stray item lingers in context
+              }
+            }
             break;
           }
+
           appendRealtimeTurn("user", candidate, msg.item_id);
+          try {
+            dcRef.current?.send(JSON.stringify({ type: "response.create" }));
+          } catch {
+            setError("メッセージを送信できませんでした。もう一度お試しください。");
+          }
           break;
         }
         case "conversation.item.done":
