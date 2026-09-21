@@ -91,7 +91,7 @@ export default async function PricingPage() {
       price: "¥4,990",
       accent: "violet",
       features: [
-        `全26シーンでAI会話練習(月${CONVERSATION_MINUTES_PER_MONTH.standard}分まで)`,
+        `全31シーンでAI会話練習(月${CONVERSATION_MINUTES_PER_MONTH.standard}分まで)`,
         "リアルタイム音声・AIコーチのフィードバック",
         "マイページでの進捗トラッキング",
         "いつでも解約可能",

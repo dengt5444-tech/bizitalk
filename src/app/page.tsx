@@ -151,7 +151,7 @@ export default function Home() {
               Scenarios
             </p>
             <h2 className="mt-3 font-display text-3xl font-semibold text-ink sm:text-4xl">
-              4つのカテゴリーで、実践に近い英語を。
+              5つのカテゴリーで、実践に近い英語を。
             </h2>
           </div>
         </Reveal>
@@ -195,7 +195,7 @@ export default function Home() {
             ))}
           </div>
           <p className="mt-6 text-center text-sm text-ink-soft">
-            ほかにも、シンガポールやドイツの同僚、投資家、採用面接官など全26シーンをご用意しています。
+            ほかにも、シンガポールやドイツの同僚、投資家、外資系企業の採用面接官など全31シーンをご用意しています。
           </p>
         </div>
       </section>
