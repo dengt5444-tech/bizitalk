@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ArrowRight } from "lucide-react";
 import { Avatar } from "@/components/Avatar";
 import { HeroIllustration } from "@/components/illustrations/HeroIllustration";
 import { CategoryIllustration } from "@/components/illustrations/CategoryIllustration";
@@ -141,7 +142,7 @@ export default function Home() {
             <Link
               key={category}
               href="/conversation"
-              className="group flex items-start gap-4 rounded-2xl border border-line bg-surface p-6 transition hover:border-ink-faint"
+              className="group flex items-start gap-4 rounded-2xl border border-line bg-surface p-6 shadow-card transition hover:-translate-y-0.5 hover:border-ink-faint hover:shadow-card-hover"
             >
               <CategoryIllustration category={category} size={56} className="shrink-0" />
               <div>
@@ -166,7 +167,7 @@ export default function Home() {
             {PERSONAS.map((persona) => (
               <div
                 key={persona.name}
-                className="flex flex-col items-center gap-2 rounded-2xl border border-line bg-surface p-4 text-center"
+                className="flex flex-col items-center gap-2 rounded-2xl border border-line bg-surface p-4 text-center shadow-card transition hover:-translate-y-0.5 hover:shadow-card-hover"
               >
                 <Avatar name={persona.name} />
                 <p className="text-sm font-medium text-ink">{persona.name}</p>
@@ -195,9 +196,10 @@ export default function Home() {
           </div>
           <Link
             href="/materials"
-            className="shrink-0 rounded-full border border-line px-6 py-3 text-sm font-medium text-ink transition hover:border-ink-faint"
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-line px-6 py-3 text-sm font-medium text-ink transition hover:border-ink-faint"
           >
-            リスニング教材を見る →
+            リスニング教材を見る
+            <ArrowRight size={16} strokeWidth={2} />
           </Link>
         </div>
       </section>

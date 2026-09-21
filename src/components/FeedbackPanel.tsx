@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { ArrowRight } from "lucide-react";
 import type { ConversationFeedback } from "@/lib/conversation";
 
 export function FeedbackPanel({
@@ -86,7 +87,10 @@ export function FeedbackPanel({
             {feedback.corrections.map((c, i) => (
               <li key={i} className="rounded-xl bg-paper-dim p-3.5 text-sm">
                 <p className="text-rose line-through">{c.original}</p>
-                <p className="mt-1 font-medium text-signal-dim">→ {c.corrected}</p>
+                <p className="mt-1 flex items-center gap-1.5 font-medium text-signal-dim">
+                  <ArrowRight size={14} strokeWidth={2} className="shrink-0" />
+                  {c.corrected}
+                </p>
                 <p className="mt-1 text-xs text-ink-soft">{c.explanation}</p>
               </li>
             ))}

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ArrowRight } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser, isListeningEntitled } from "@/lib/entitlements";
 import {
@@ -73,7 +74,7 @@ export default async function MaterialsPage() {
                     <li key={material.id}>
                       <Link
                         href={`/materials/${material.slug}`}
-                        className="group flex h-full flex-col overflow-hidden rounded-2xl border border-line bg-surface transition hover:border-ink-faint"
+                        className="group flex h-full flex-col overflow-hidden rounded-2xl border border-line bg-surface shadow-card transition hover:-translate-y-0.5 hover:border-ink-faint hover:shadow-card-hover"
                       >
                         <div className="relative h-32 w-full overflow-hidden">
                           <SceneIllustration
@@ -99,8 +100,9 @@ export default async function MaterialsPage() {
                               {material.description}
                             </p>
                           </div>
-                          <p className="mt-4 text-sm font-medium text-signal">
-                            {unlocked ? "再生する →" : "詳細を見る →"}
+                          <p className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-signal">
+                            {unlocked ? "再生する" : "詳細を見る"}
+                            <ArrowRight size={16} strokeWidth={2} />
                           </p>
                         </div>
                       </Link>

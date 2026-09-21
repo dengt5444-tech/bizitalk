@@ -1,3 +1,4 @@
+import { Check } from "lucide-react";
 import { WaitlistForm } from "@/components/WaitlistForm";
 
 export const metadata = {
@@ -28,10 +29,12 @@ export default function EarlyAccessPage() {
         </p>
       </div>
 
-      <ul className="mt-10 space-y-3 rounded-2xl border border-line bg-surface p-6">
+      <ul className="mt-10 space-y-3 rounded-2xl border border-line bg-surface p-6 shadow-card">
         {FEATURES.map((feature) => (
           <li key={feature} className="flex items-start gap-2.5 text-sm text-ink-soft">
-            <span className="mt-0.5 text-signal">✓</span>
+            <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-signal-tint text-signal">
+              <Check size={13} strokeWidth={2.5} />
+            </span>
             {feature}
           </li>
         ))}

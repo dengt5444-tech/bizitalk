@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/entitlements";
@@ -28,7 +29,8 @@ export default async function ConversationHistoryPage() {
         href="/dashboard"
         className="inline-flex items-center gap-1 text-sm text-ink-soft transition hover:text-signal"
       >
-        ← マイページに戻る
+        <ArrowLeft size={14} strokeWidth={2} />
+        マイページに戻る
       </Link>
 
       <p className="mt-5 text-xs font-medium tracking-[0.2em] text-signal uppercase">

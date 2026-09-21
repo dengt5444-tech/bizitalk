@@ -62,7 +62,7 @@ export function Quiz({
   }
 
   return (
-    <div className="rounded-2xl border border-line bg-surface p-6">
+    <div className="rounded-2xl border border-line bg-surface p-6 shadow-card">
       <h2 className="font-display text-lg font-semibold text-ink">
         理解度テスト
       </h2>

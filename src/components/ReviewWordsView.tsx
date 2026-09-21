@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { ArrowLeft, ArrowRight } from "lucide-react";
 import { RemoveWordButton } from "@/components/RemoveWordButton";
 
 export type ReviewWord = {
@@ -40,9 +41,19 @@ export function ReviewWordsView({ words }: { words: ReviewWord[] }) {
         <button
           type="button"
           onClick={() => setMode(mode === "list" ? "flashcards" : "list")}
-          className="rounded-full bg-signal px-5 py-2.5 text-sm font-medium text-paper transition hover:bg-signal-dim"
+          className="inline-flex items-center gap-1.5 rounded-full bg-signal px-5 py-2.5 text-sm font-medium text-paper transition hover:bg-signal-dim"
         >
-          {mode === "list" ? "フラッシュカードで復習する →" : "← リスト表示に戻る"}
+          {mode === "list" ? (
+            <>
+              フラッシュカードで復習する
+              <ArrowRight size={16} strokeWidth={2} />
+            </>
+          ) : (
+            <>
+              <ArrowLeft size={16} strokeWidth={2} />
+              リスト表示に戻る
+            </>
+          )}
         </button>
       </div>
 

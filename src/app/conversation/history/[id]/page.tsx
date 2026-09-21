@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/entitlements";
@@ -45,7 +46,8 @@ export default async function ConversationHistoryDetailPage({
         href="/conversation/history"
         className="inline-flex items-center gap-1 text-sm text-ink-soft transition hover:text-signal"
       >
-        ← 会話の記録に戻る
+        <ArrowLeft size={14} strokeWidth={2} />
+        会話の記録に戻る
       </Link>
 
       <div className="mt-5 flex items-center gap-3">

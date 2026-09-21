@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser, isEntitled } from "@/lib/entitlements";
@@ -46,7 +47,8 @@ export default async function ConversationScenarioPage({
         href="/conversation"
         className="inline-flex items-center gap-1 text-sm text-ink-soft transition hover:text-signal"
       >
-        ← シーン一覧に戻る
+        <ArrowLeft size={14} strokeWidth={2} />
+        シーン一覧に戻る
       </Link>
 
       <div className="mt-5 overflow-hidden rounded-2xl">

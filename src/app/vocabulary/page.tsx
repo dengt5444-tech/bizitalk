@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ArrowRight } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser, isListeningEntitled } from "@/lib/entitlements";
 
@@ -36,7 +37,7 @@ export default async function VocabularyPage() {
             <li key={deck.id}>
               <Link
                 href={`/vocabulary/${deck.slug}`}
-                className="group flex h-full flex-col justify-between rounded-2xl border border-line bg-surface p-5 transition hover:border-ink-faint"
+                className="group flex h-full flex-col justify-between rounded-2xl border border-line bg-surface p-5 shadow-card transition hover:-translate-y-0.5 hover:border-ink-faint hover:shadow-card-hover"
               >
                 <div>
                   <div className="flex items-center justify-between">
@@ -60,8 +61,9 @@ export default async function VocabularyPage() {
                     {deck.description}
                   </p>
                 </div>
-                <p className="mt-4 text-sm font-medium text-signal">
-                  {unlocked ? "学習する →" : "詳細を見る →"}
+                <p className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-signal">
+                  {unlocked ? "学習する" : "詳細を見る"}
+                  <ArrowRight size={16} strokeWidth={2} />
                 </p>
               </Link>
             </li>

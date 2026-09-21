@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { Check, Plus } from "lucide-react";
 import {
   getConversationPlan,
   getCurrentUser,
@@ -168,7 +169,7 @@ export default async function PricingPage() {
           return (
             <div
               key={plan.key}
-              className="rounded-3xl border border-line bg-surface p-8 text-center"
+              className="rounded-3xl border border-line bg-surface p-8 text-center shadow-card transition hover:shadow-card-hover"
             >
               <span className={`inline-block rounded-full ${accentTint} px-4 py-1.5 text-xs font-semibold ${accentTintText}`}>
                 {plan.badge}
@@ -189,7 +190,9 @@ export default async function PricingPage() {
               <ul className="mt-7 space-y-2.5 text-left text-sm text-ink-soft">
                 {plan.features.map((feature) => (
                   <li key={feature} className="flex items-center gap-2.5">
-                    <span className={accentText}>✓</span>
+                    <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full ${accentTint} ${accentText}`}>
+                      <Check size={13} strokeWidth={2.5} />
+                    </span>
                     {feature}
                   </li>
                 ))}
@@ -218,14 +221,14 @@ export default async function PricingPage() {
         <h2 className="font-display text-xl font-semibold text-ink">
           よくある質問
         </h2>
-        <div className="mt-5 divide-y divide-line border-t border-line">
+        <div className="mt-5 divide-y divide-line rounded-2xl border border-line bg-surface px-5 shadow-card">
           {FAQ.map((item) => (
             <details key={item.question} className="group py-4">
               <summary className="cursor-pointer list-none font-medium text-ink marker:content-none">
                 <span className="flex items-center justify-between">
                   {item.question}
                   <span className="text-signal transition group-open:rotate-45">
-                    +
+                    <Plus size={18} strokeWidth={2} />
                   </span>
                 </span>
               </summary>

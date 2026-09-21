@@ -621,7 +621,7 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
 
   return (
     <>
-    <div className="rounded-2xl border border-line bg-surface">
+    <div className="rounded-2xl border border-line bg-surface shadow-card">
       <audio ref={audioRef} autoPlay className="hidden" />
 
       {phase === "idle" && (

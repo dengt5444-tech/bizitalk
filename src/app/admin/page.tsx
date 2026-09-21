@@ -42,7 +42,7 @@ export default async function AdminHomePage() {
           <li key={link.href}>
             <Link
               href={link.href}
-              className="group flex h-full flex-col rounded-2xl border border-line bg-surface p-5 transition hover:border-ink-faint"
+              className="group flex h-full flex-col rounded-2xl border border-line bg-surface p-5 shadow-card transition hover:-translate-y-0.5 hover:border-ink-faint hover:shadow-card-hover"
             >
               <p className="font-display font-semibold text-ink group-hover:text-signal">
                 {link.title}

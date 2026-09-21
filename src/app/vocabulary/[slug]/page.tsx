@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser, isListeningEntitled } from "@/lib/entitlements";
@@ -35,7 +36,8 @@ export default async function VocabDeckPage({
         href="/vocabulary"
         className="inline-flex items-center gap-1 text-sm text-ink-soft transition hover:text-signal"
       >
-        ← 単語帳一覧に戻る
+        <ArrowLeft size={14} strokeWidth={2} />
+        単語帳一覧に戻る
       </Link>
 
       <div className="mt-5 flex flex-wrap gap-2">
