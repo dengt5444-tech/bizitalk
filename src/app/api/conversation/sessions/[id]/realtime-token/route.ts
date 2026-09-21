@@ -107,7 +107,25 @@ export async function POST(
               // from the client (see ConversationRoom.tsx), which only
               // happens after the transcript has passed those same checks —
               // so unvalidated audio can no longer produce a reply at all.
-              turn_detection: { type: "semantic_vad", eagerness: "low", create_response: false },
+              //
+              // interrupt_response: false turns off the mirror-image problem
+              // — by default the server truncates its OWN in-progress
+              // response the moment it detects any input speech, entirely
+              // server-side and regardless of anything the client does. The
+              // client now keeps the mic hardware-disabled for the whole
+              // time the AI is talking (see syncMicEnabled in
+              // ConversationRoom.tsx), so genuine mid-response interruption
+              // isn't possible via voice anymore anyway — the only thing
+              // left that could still trigger this was a false positive
+              // (residual mic bleed, noise), which is exactly what was
+              // cutting the AI off mid-sentence for no reason visible to
+              // the learner.
+              turn_detection: {
+                type: "semantic_vad",
+                eagerness: "low",
+                create_response: false,
+                interrupt_response: false,
+              },
             },
           },
         },

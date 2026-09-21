@@ -236,16 +236,6 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
   // implausibly short blips instead of trusting the transcript blindly.
   const lastSpeechStartedAtRef = useRef<number | null>(null);
   const lastSpeechDurationMsRef = useRef(0);
-  // Barge-in used to cancel the AI's in-flight response the instant any
-  // speech_started event fired — including ones caused by a noise blip or
-  // the AI hearing its own echo. That cut the AI off mid-sentence for no
-  // real reason, and since automatic response creation is now disabled
-  // (see realtime-token/route.ts), nothing would prompt a new reply
-  // afterward — the conversation would just go silent. This timer delays
-  // the actual cancel until the detected speech has lasted at least
-  // MIN_SPEECH_DURATION_MS, the same bar used to trust a transcript, so a
-  // blip that stops before then never interrupts the AI at all.
-  const bargeInTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // The session is created with a seeded opening-line message already shown
   // on screen (so it renders instantly, without waiting on the model). The
   // realtime API is then asked to actually speak that same line; this flag
@@ -278,10 +268,6 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
   }, [messages]);
 
   function closeRealtimeConnection() {
-    if (bargeInTimerRef.current) {
-      clearTimeout(bargeInTimerRef.current);
-      bargeInTimerRef.current = null;
-    }
     try {
       dcRef.current?.close();
     } catch {
@@ -494,37 +480,20 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
         case "input_audio_buffer.speech_started":
           setUserSpeaking(true);
           lastSpeechStartedAtRef.current = Date.now();
-          // Barge-in: the learner started talking while the AI still has a
-          // response in flight. Don't cancel on this event alone though —
-          // it fires for any detected sound, including a brief noise blip
-          // or the AI hearing its own echo, and cutting the AI off for
-          // those was making it go silent for no real reason. Wait until
-          // the speech has actually continued for MIN_SPEECH_DURATION_MS
-          // (the same bar used to trust a transcript) before treating it
-          // as a genuine interruption; a blip that stops before then gets
-          // its timer cleared in speech_stopped below and never cancels
-          // anything.
-          if (assistantSpeakingRef.current) {
-            if (bargeInTimerRef.current) clearTimeout(bargeInTimerRef.current);
-            bargeInTimerRef.current = setTimeout(() => {
-              bargeInTimerRef.current = null;
-              if (!assistantSpeakingRef.current) return;
-              assistantSpeakingRef.current = false;
-              setAssistantSpeaking(false);
-              try {
-                dcRef.current?.send(JSON.stringify({ type: "response.cancel" }));
-              } catch {
-                // ignore — worst case the current response finishes normally
-              }
-            }, MIN_SPEECH_DURATION_MS);
-          }
+          // No barge-in cancel here anymore — the mic is already disabled
+          // for the entire time the AI is speaking (see syncMicEnabled),
+          // so this event should never fire during a genuine AI turn in
+          // the first place. It used to also cancel the AI's in-flight
+          // response the moment this fired, which was meant to let the
+          // learner interrupt naturally, but with the mic already off
+          // during AI speech that could no longer happen from real
+          // speech — the only thing left that could still trigger it was
+          // a false positive (residual mic bleed, noise), which is
+          // exactly what was cutting the AI off mid-sentence for no
+          // reason the learner could see.
           break;
         case "input_audio_buffer.speech_stopped":
           setUserSpeaking(false);
-          if (bargeInTimerRef.current) {
-            clearTimeout(bargeInTimerRef.current);
-            bargeInTimerRef.current = null;
-          }
           lastSpeechDurationMsRef.current = lastSpeechStartedAtRef.current
             ? Date.now() - lastSpeechStartedAtRef.current
             : 0;
