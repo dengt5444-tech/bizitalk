@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { runWithConcurrencyLimit } from "@/lib/concurrency";
 import type { VocabWord } from "@/lib/vocab";
 
 type Mode = "list" | "flashcards" | "quiz";
@@ -198,20 +199,34 @@ function VocabQuiz({
     if (!isLoggedIn) return;
 
     const missed = questions.filter((q, i) => answers[i] !== q.answerIndex);
-    await Promise.all(
-      missed.map((q) =>
-        fetch("/api/review/words", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            sourceTitle: deckTitle,
-            word: q.word.word,
-            meaning: q.word.meaning,
-          }),
-        }),
+    // A deck can have dozens of words, so a quiz gone badly could mean
+    // dozens of concurrent save requests — firing them all at once (as
+    // Promise.all did) was enough to get some individually aborted, and
+    // Promise.all also fails the whole batch (skipping setSavedCount
+    // entirely, silently dropping the confirmation message) the moment
+    // any single one rejects. Limiting how many run at once, and letting
+    // every request run to its own conclusion via allSettled-style
+    // results, means the count shown is the number that actually
+    // succeeded rather than the number attempted.
+    const results = await runWithConcurrencyLimit(
+      missed.map(
+        (q) => () =>
+          fetch("/api/review/words", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              sourceTitle: deckTitle,
+              word: q.word.word,
+              meaning: q.word.meaning,
+            }),
+          }).then((res) => res.ok),
       ),
+      6,
     );
-    setSavedCount(missed.length);
+    const successCount = results.filter(
+      (r) => r.status === "fulfilled" && r.value,
+    ).length;
+    setSavedCount(successCount);
   }
 
   function handleRetry() {

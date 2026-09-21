@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { runWithConcurrencyLimit } from "@/lib/concurrency";
 import type { QuizQuestion } from "@/lib/materials";
 
 export function Quiz({
@@ -39,22 +40,36 @@ export function Quiz({
     // plain comprehension questions) — those still get saved for review, just
     // keyed by the question itself with the correct choice as the "meaning",
     // so every wrong answer ends up reviewable, not only the word-tagged ones.
-    await Promise.all(
-      missed.map((q) =>
-        fetch("/api/review/listening-words", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            materialId,
-            materialTitle,
-            word: q.word ?? q.question,
-            meaning: q.word ? (q.wordMeaning ?? "") : q.choices[q.answerIndex],
-          }),
-        }),
+    //
+    // Limiting concurrency and letting every request run to its own
+    // conclusion rather than firing them all at once with Promise.all: with
+    // several concurrent saves, one slow or dropped request shouldn't fail
+    // the whole batch (Promise.all would skip setSavedCount entirely the
+    // moment any single request rejected, silently dropping the
+    // confirmation message even though most saves had actually gone
+    // through). The count shown is the number that actually succeeded, not
+    // the number attempted.
+    const results = await runWithConcurrencyLimit(
+      missed.map(
+        (q) => () =>
+          fetch("/api/review/listening-words", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              materialId,
+              materialTitle,
+              word: q.word ?? q.question,
+              meaning: q.word ? (q.wordMeaning ?? "") : q.choices[q.answerIndex],
+            }),
+          }).then((res) => res.ok),
       ),
+      6,
     );
+    const successCount = results.filter(
+      (r) => r.status === "fulfilled" && r.value,
+    ).length;
 
-    setSavedCount(missed.length);
+    setSavedCount(successCount);
   }
 
   function handleRetry() {
