@@ -19,7 +19,7 @@ CEO、海外の同僚、取引先——相手役・シチュエーション別�
 
 ## 構成
 
-- **認証**: Supabase Auth(マジックリンク + 6桁コードのフォールバック)
+- **認証**: Supabase Auth(マジックリンク + コード入力のフォールバック)。メール送信はResendのカスタムSMTP経由(独自ドメイン `bizitalkapp.com` を使用)
 - **AI会話練習**: 4カテゴリー・全26シーン + フリートークモード(`conversation_scenarios`)
   - 同僚・日常 / 海外の同僚(インド・シンガポール・イギリス・オーストラリア・ドイツ) / 顧客・取引先 / 経営陣・上司(CEO・CFO)
   - **フリートーク**: 固定のシーン・相手役ではなく、話したいテーマを自分で指定して(空欄でもOK)AIと自由形式の会話を練習できるモード。指定したテーマは `conversation_sessions.custom_topic` に保存し、テキストモードの返信生成・リアルタイム音声の指示・冒頭の挨拶いずれにも反映(`src/lib/conversation.ts` の `withCustomTopic` / `freeTalkOpeningLine`)。テーマ未指定の場合はAIが幅広いビジネス系の話題を提案します。
@@ -87,6 +87,21 @@ node scripts/seed-vocab-decks.mjs
 ## デプロイ
 
 Vercelにこのリポジトリを接続し、`.env.example` に記載の環境変数を設定してください。`STRIPE_PRICE_ID`(スタンダード)・`STRIPE_PRICE_ID_TRIAL`(お試し)・`STRIPE_PRICE_ID_UNLIMITED`(使い放題)・`STRIPE_PRICE_ID_LISTENING`(リスニング)は、それぞれ別々のStripe価格IDです。
+
+## エラー監視(Sentry)
+
+`@sentry/nextjs` を導入済みですが、`SENTRY_DSN` / `NEXT_PUBLIC_SENTRY_DSN` を設定するまでは何も送信しない安全な無効状態です。本番運用を始める前に、Sentryで無料アカウントを作成しDSNを発行してから、Vercelの環境変数に設定してください。`SENTRY_ORG` / `SENTRY_PROJECT` / `SENTRY_AUTH_TOKEN` はソースマップのアップロード(スタックトレースを読みやすくする)にのみ使用し、未設定でもビルドは通ります。
+
+## 管理者ページ
+
+`ADMIN_EMAILS` に登録したメールアドレスでログインすると `/admin` から以下を確認できます:
+
+- `/admin/usage`: 今月のAI会話(リアルタイム音声)の利用時間・プラン別の内訳・`src/lib/limits.ts` の見積もりコスト(¥16/分)での推定金額。OpenAIの実際の請求額と比較することで、この見積もりが正しいか検証できます。
+- `/admin/referrals`: 発行済みの紹介コードごとの登録数・有効化数。
+
+## 将来のネイティブアプリ化について
+
+iOS/Android向けのネイティブアプリを検討する際は、Apple/Googleの課金ポリシー(アプリ内課金の義務化・手数料)を先に確認してください。詳細は [`docs/app-store-billing.md`](docs/app-store-billing.md) にまとめています。
 
 ## 紹介プログラムについて
 

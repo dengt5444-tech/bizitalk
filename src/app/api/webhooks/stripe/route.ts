@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import type Stripe from "stripe";
+import * as Sentry from "@sentry/nextjs";
 import { createStripeClient } from "@/lib/stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -45,6 +46,7 @@ async function recordReferralRedemptionIfAny(
       "Failed to record referral redemption:",
       err instanceof Error ? err.message : err,
     );
+    Sentry.captureException(err);
   }
 }
 

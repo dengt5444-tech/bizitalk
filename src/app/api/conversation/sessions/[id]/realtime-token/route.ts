@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { NextResponse } from "next/server";
+import * as Sentry from "@sentry/nextjs";
 import { getAuthedClient } from "@/lib/supabase/api";
 import { REALTIME_MODEL } from "@/lib/openai";
 import { freeTalkOpeningLine, withCustomTopic } from "@/lib/conversation";
@@ -89,6 +90,10 @@ export async function POST(
   if (!response.ok) {
     const detail = await response.text();
     console.error("realtime client_secrets request failed:", response.status, detail);
+    Sentry.captureMessage("realtime client_secrets request failed", {
+      level: "error",
+      extra: { status: response.status, detail },
+    });
     return NextResponse.json({ error: "realtime_unavailable" }, { status: 502 });
   }
 

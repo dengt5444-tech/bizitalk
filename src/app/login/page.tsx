@@ -121,7 +121,7 @@ function LoginForm() {
           <div className="mt-4 rounded-xl border border-rose/30 bg-rose-tint p-4 text-sm text-rose">
             <p className="font-semibold">ログインリンクの確認に失敗しました。</p>
             <p className="mt-1">
-              リンクが無効になった場合は、下のフォームからもう一度メールを送信し、メール内の6桁のコードを入力してログインすることもできます。
+              リンクが無効になった場合は、下のフォームからもう一度メールを送信し、メール内のコードを入力してログインすることもできます。
             </p>
             {callbackReason && (
               <p className="mt-2 text-xs break-all opacity-80">
@@ -134,7 +134,7 @@ function LoginForm() {
         {status === "sent" ? (
           <div className="mt-8 space-y-6">
             <div className="rounded-xl border border-signal/30 bg-signal-tint p-4 text-sm text-signal-dim">
-              {email} 宛にメールを送信しました。メール内のリンクをクリックするか、メールに記載された6桁のコードを下に入力してください。
+              {email} 宛にメールを送信しました。メール内のリンクをクリックするか、メールに記載されたコードを下に入力してください。
             </div>
 
             <form onSubmit={handleVerifyCode} className="space-y-3">
@@ -143,7 +143,7 @@ function LoginForm() {
                   htmlFor="code"
                   className="block text-sm font-medium text-ink"
                 >
-                  6桁のコード
+                  コード
                 </label>
                 <input
                   id="code"
