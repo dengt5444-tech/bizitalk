@@ -272,7 +272,7 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
 
   function clearHint() {
     hintRequestIdRef.current += 1;
-    clearHint();
+    setHint(null);
     setHintLoading(false);
   }
 
