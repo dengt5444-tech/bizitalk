@@ -151,7 +151,7 @@ export default function Home() {
               Scenarios
             </p>
             <h2 className="mt-3 font-display text-3xl font-semibold text-ink sm:text-4xl">
-              5つのカテゴリーで、実践に近い英語を。
+              6つのカテゴリーで、実践に近い英語を。
             </h2>
           </div>
         </Reveal>
