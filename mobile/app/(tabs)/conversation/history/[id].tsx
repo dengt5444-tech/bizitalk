@@ -14,6 +14,7 @@ export default function ConversationHistoryDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const [session, setSession] = useState<SessionDetail | null | undefined>(undefined);
   const [loadError, setLoadError] = useState(false);
+  const [loadErrorDetail, setLoadErrorDetail] = useState("");
   const [showTranscript, setShowTranscript] = useState(false);
 
   const reload = useCallback(() => {
@@ -22,8 +23,12 @@ export default function ConversationHistoryDetailScreen() {
       .then((data) => {
         setSession(data);
         setLoadError(false);
+        setLoadErrorDetail("");
       })
-      .catch(() => setLoadError(true));
+      .catch((err) => {
+        setLoadError(true);
+        setLoadErrorDetail(err instanceof Error ? err.message : "");
+      });
   }, [id]);
 
   useEffect(() => {
@@ -34,7 +39,7 @@ export default function ConversationHistoryDetailScreen() {
     if (loadError) {
       return (
         <ScreenScroll>
-          <ErrorState onRetry={reload} />
+          <ErrorState onRetry={reload} message={loadErrorDetail || undefined} />
         </ScreenScroll>
       );
     }

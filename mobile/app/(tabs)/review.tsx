@@ -18,6 +18,7 @@ export default function ReviewScreen() {
   const { user, initializing } = useAuth();
   const [words, setWords] = useState<ReviewWord[] | null>(null);
   const [loadError, setLoadError] = useState(false);
+  const [loadErrorDetail, setLoadErrorDetail] = useState("");
   const [refreshing, setRefreshing] = useState(false);
 
   const reload = useCallback(() => {
@@ -26,8 +27,12 @@ export default function ReviewScreen() {
       .then((data) => {
         setWords(data);
         setLoadError(false);
+        setLoadErrorDetail("");
       })
-      .catch(() => setLoadError(true));
+      .catch((err) => {
+        setLoadError(true);
+        setLoadErrorDetail(err instanceof Error ? err.message : "");
+      });
   }, [user]);
 
   useEffect(() => {
@@ -80,7 +85,7 @@ export default function ReviewScreen() {
       return (
         <ScreenScroll contentContainerStyle={{ gap: 20 }}>
           {header}
-          <ErrorState onRetry={reload} />
+          <ErrorState onRetry={reload} message={loadErrorDetail || undefined} />
         </ScreenScroll>
       );
     }

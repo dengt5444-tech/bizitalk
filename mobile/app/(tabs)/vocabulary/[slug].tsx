@@ -14,6 +14,7 @@ export default function VocabDeckScreen() {
   const { user } = useAuth();
   const [deck, setDeck] = useState<VocabDeckSummary | null | undefined>(undefined);
   const [loadError, setLoadError] = useState(false);
+  const [loadErrorDetail, setLoadErrorDetail] = useState("");
 
   const reload = useCallback(() => {
     if (typeof slug !== "string") return Promise.resolve();
@@ -21,8 +22,12 @@ export default function VocabDeckScreen() {
       .then((data) => {
         setDeck(data);
         setLoadError(false);
+        setLoadErrorDetail("");
       })
-      .catch(() => setLoadError(true));
+      .catch((err) => {
+        setLoadError(true);
+        setLoadErrorDetail(err instanceof Error ? err.message : "");
+      });
   }, [slug]);
 
   useEffect(() => {
@@ -33,7 +38,7 @@ export default function VocabDeckScreen() {
     if (loadError) {
       return (
         <ScreenScroll>
-          <ErrorState onRetry={reload} />
+          <ErrorState onRetry={reload} message={loadErrorDetail || undefined} />
         </ScreenScroll>
       );
     }

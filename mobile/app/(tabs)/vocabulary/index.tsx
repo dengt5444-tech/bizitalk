@@ -15,6 +15,7 @@ export default function VocabularyScreen() {
   const router = useRouter();
   const [decks, setDecks] = useState<VocabDeckSummary[] | null>(null);
   const [loadError, setLoadError] = useState(false);
+  const [loadErrorDetail, setLoadErrorDetail] = useState("");
   const [refreshing, setRefreshing] = useState(false);
 
   const reload = useCallback(() => {
@@ -22,8 +23,12 @@ export default function VocabularyScreen() {
       .then((data) => {
         setDecks(data);
         setLoadError(false);
+        setLoadErrorDetail("");
       })
-      .catch(() => setLoadError(true));
+      .catch((err) => {
+        setLoadError(true);
+        setLoadErrorDetail(err instanceof Error ? err.message : "");
+      });
   }, []);
 
   useEffect(() => {
@@ -43,7 +48,7 @@ export default function VocabularyScreen() {
     if (loadError) {
       return (
         <ScreenScroll contentContainerStyle={{ gap: 20 }}>
-          <ErrorState onRetry={reload} />
+          <ErrorState onRetry={reload} message={loadErrorDetail || undefined} />
         </ScreenScroll>
       );
     }

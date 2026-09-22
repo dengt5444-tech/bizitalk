@@ -18,6 +18,7 @@ export default function ConversationHistoryScreen() {
   const { user, initializing } = useAuth();
   const [sessions, setSessions] = useState<HistorySession[] | null>(null);
   const [loadError, setLoadError] = useState(false);
+  const [loadErrorDetail, setLoadErrorDetail] = useState("");
   const [refreshing, setRefreshing] = useState(false);
 
   const reload = useCallback(() => {
@@ -26,8 +27,12 @@ export default function ConversationHistoryScreen() {
       .then((data) => {
         setSessions(data);
         setLoadError(false);
+        setLoadErrorDetail("");
       })
-      .catch(() => setLoadError(true));
+      .catch((err) => {
+        setLoadError(true);
+        setLoadErrorDetail(err instanceof Error ? err.message : "");
+      });
   }, [user]);
 
   useEffect(() => {
@@ -55,7 +60,7 @@ export default function ConversationHistoryScreen() {
     if (loadError) {
       return (
         <ScreenScroll contentContainerStyle={{ gap: 20 }}>
-          <ErrorState onRetry={reload} />
+          <ErrorState onRetry={reload} message={loadErrorDetail || undefined} />
         </ScreenScroll>
       );
     }

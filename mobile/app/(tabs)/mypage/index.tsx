@@ -25,6 +25,7 @@ export default function MyPageScreen() {
 
   const [dashboard, setDashboard] = useState<DashboardData | null>(null);
   const [dashboardError, setDashboardError] = useState(false);
+  const [dashboardErrorDetail, setDashboardErrorDetail] = useState("");
   const [conversationPlan, setConversationPlan] = useState<Awaited<ReturnType<typeof getConversationPlan>>>(null);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -38,8 +39,12 @@ export default function MyPageScreen() {
       .then((data) => {
         setDashboard(data);
         setDashboardError(false);
+        setDashboardErrorDetail("");
       })
-      .catch(() => setDashboardError(true));
+      .catch((err) => {
+        setDashboardError(true);
+        setDashboardErrorDetail(err instanceof Error ? err.message : "");
+      });
   }, [user]);
 
   useEffect(() => {
@@ -95,7 +100,9 @@ export default function MyPageScreen() {
         </Card>
       )}
 
-      {user && !dashboard && dashboardError && <ErrorState onRetry={reloadDashboard} />}
+      {user && !dashboard && dashboardError && (
+        <ErrorState onRetry={reloadDashboard} message={dashboardErrorDetail || undefined} />
+      )}
       {user && !dashboard && !dashboardError && <SkeletonList count={3} />}
 
       {user && dashboard && (
