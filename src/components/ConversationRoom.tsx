@@ -494,6 +494,16 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
     syncMicEnabled();
   }
 
+  // Every place that asks the model for a reply goes through this instead
+  // of sending response.create directly — the round trip to the server's
+  // own response.created acknowledgment (previously what gated the mic)
+  // is itself an unprotected window; disabling the mic on our own intent
+  // to get a response, before the request even goes out, closes it.
+  function sendResponseCreate(extra?: Record<string, unknown>) {
+    beginAssistantResponse();
+    dcRef.current?.send(JSON.stringify({ type: "response.create", ...extra }));
+  }
+
   function playAudio(index: number) {
     if (!sessionId || !audioRef.current) return;
     audioRef.current.srcObject = null;
@@ -531,6 +541,15 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
     const [tokenData, micStream] = await Promise.all([tokenPromise, micStreamPromise]);
 
     micStreamRef.current = micStream;
+    // The mic defaults to enabled the instant getUserMedia resolves — well
+    // before dc.onopen fires and asks for the opening line, let alone
+    // before the server's response.created ack for it comes back. Locking
+    // it off right here, immediately, closes that startup window instead
+    // of leaving it open until the first response-lifecycle event arrives;
+    // beginAssistantResponse (called for real once the opening line's
+    // response.create actually goes out) just re-confirms the same state.
+    assistantSpeakingRef.current = true;
+    syncMicEnabled();
     micStream.getTracks().forEach((track) => pc.addTrack(track, micStream));
 
     const dc = pc.createDataChannel("oai-events");
@@ -675,7 +694,7 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
             level: "info",
           });
           try {
-            dcRef.current?.send(JSON.stringify({ type: "response.create" }));
+            sendResponseCreate();
           } catch {
             setError("メッセージを送信できませんでした。もう一度お試しください。");
           }
@@ -707,14 +726,11 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
 
     dc.onopen = () => {
       try {
-        dc.send(
-          JSON.stringify({
-            type: "response.create",
-            response: {
-              instructions: `Say this exact line out loud as your opening, naturally, with nothing added before or after it: "${scenario.openingLine}"`,
-            },
-          }),
-        );
+        sendResponseCreate({
+          response: {
+            instructions: `Say this exact line out loud as your opening, naturally, with nothing added before or after it: "${scenario.openingLine}"`,
+          },
+        });
       } catch {
         // ignore
       }
@@ -860,7 +876,7 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
             item: { type: "message", role: "user", content: [{ type: "input_text", text }] },
           }),
         );
-        dcRef.current.send(JSON.stringify({ type: "response.create" }));
+        sendResponseCreate();
       } catch {
         setError("メッセージを送信できませんでした。もう一度お試しください。");
       }
