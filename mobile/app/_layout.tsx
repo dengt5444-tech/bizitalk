@@ -3,6 +3,7 @@ import * as SplashScreen from "expo-splash-screen";
 import React, { useCallback } from "react";
 import { View } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { AuthProvider } from "@/context/AuthProvider";
 import { ThemeProvider, useTheme } from "@/theme/ThemeProvider";
 import { useHarborFonts } from "@/theme/fonts";
@@ -43,12 +44,14 @@ export default function RootLayout() {
   }
 
   return (
-    <SafeAreaProvider onLayout={onLayoutRootView}>
-      <ThemeProvider>
-        <AuthProvider>
-          <RootStack />
-        </AuthProvider>
-      </ThemeProvider>
-    </SafeAreaProvider>
+    <ErrorBoundary>
+      <SafeAreaProvider onLayout={onLayoutRootView}>
+        <ThemeProvider>
+          <AuthProvider>
+            <RootStack />
+          </AuthProvider>
+        </ThemeProvider>
+      </SafeAreaProvider>
+    </ErrorBoundary>
   );
 }
