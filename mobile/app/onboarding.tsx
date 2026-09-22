@@ -3,6 +3,7 @@ import { useRouter } from "expo-router";
 import { Headphones, Mic, Sparkles, type LucideIcon } from "lucide-react-native";
 import React, { useCallback, useRef, useState } from "react";
 import { Dimensions, FlatList, Pressable, View, type ViewToken } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Button } from "@/components/ui/Button";
 import { Text } from "@/components/ui/Text";
 import { markOnboardingSeen } from "@/lib/onboarding";
@@ -31,6 +32,7 @@ const SLIDES: { icon: LucideIcon; title: string; description: string }[] = [
 
 export default function OnboardingScreen() {
   const theme = useTheme();
+  const insets = useSafeAreaInsets();
   const router = useRouter();
   const listRef = useRef<FlatList>(null);
   const [index, setIndex] = useState(0);
@@ -61,7 +63,7 @@ export default function OnboardingScreen() {
       end={{ x: 0.9, y: 1 }}
       style={{ flex: 1 }}
     >
-      <View style={{ flex: 1, justifyContent: "center" }}>
+      <View style={{ flex: 1, justifyContent: "center", paddingTop: insets.top, paddingBottom: insets.bottom }}>
         <FlatList
           ref={listRef}
           data={SLIDES}
@@ -101,7 +103,7 @@ export default function OnboardingScreen() {
         />
       </View>
 
-      <View style={{ paddingHorizontal: 28, paddingBottom: 40, gap: 20 }}>
+      <View style={{ paddingHorizontal: 28, paddingBottom: insets.bottom + 24, gap: 20 }}>
         <View style={{ flexDirection: "row", justifyContent: "center", gap: 8 }}>
           {SLIDES.map((slide, i) => (
             <View
