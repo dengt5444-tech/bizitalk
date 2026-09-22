@@ -1,6 +1,12 @@
 import { API_BASE_URL } from "./env";
 import { auth as supabaseAuth } from "./supabase";
 
+// Generous — some routes (AI reply generation, end-of-session feedback
+// scoring) can legitimately take a while — but finite, so a stuck
+// connection surfaces as a clear, specific error instead of an
+// indefinitely spinning "準備中..." button with nothing to report back.
+const REQUEST_TIMEOUT_MS = 45_000;
+
 export class ApiError extends Error {
   status: number;
   code: string;
@@ -35,10 +41,23 @@ async function request<T>(
     ...(headers as Record<string, string> | undefined),
   };
 
-  const response = await fetch(`${API_BASE_URL}${path}`, {
-    ...rest,
-    headers: resolvedHeaders,
-  });
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE_URL}${path}`, {
+      ...rest,
+      headers: resolvedHeaders,
+      signal: controller.signal,
+    });
+  } catch (err) {
+    if (err instanceof Error && err.name === "AbortError") {
+      throw new ApiError(0, "timeout");
+    }
+    throw new ApiError(0, "network_error");
+  } finally {
+    clearTimeout(timer);
+  }
 
   const isJson = response.headers.get("content-type")?.includes("application/json");
   const body = isJson ? await response.json().catch(() => null) : null;

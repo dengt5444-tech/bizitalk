@@ -306,7 +306,7 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
       setError(
         code === "monthly_limit_reached"
           ? "今月のAI会話の利用時間の上限に達しました。月が変わると再びご利用いただけます。"
-          : "会話を開始できませんでした。もう一度お試しください。",
+          : `会話を開始できませんでした。もう一度お試しください。${code ? `(${code})` : ""}`,
       );
       setPhase("idle");
     } finally {
@@ -348,8 +348,9 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
       setTurnCount(data.turnCount);
       autoFetchHint(withReply);
       if (autoPlay) playAudio(data.assistantIndex);
-    } catch {
-      setError("メッセージを送信できませんでした。もう一度お試しください。");
+    } catch (err) {
+      const code = err instanceof Error ? err.message : "";
+      setError(`メッセージを送信できませんでした。もう一度お試しください。${code ? `(${code})` : ""}`);
     } finally {
       setSending(false);
     }
@@ -376,8 +377,9 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
       );
       setFeedback(data.feedback);
       setPhase("ended");
-    } catch {
-      setError("フィードバックを取得できませんでした。もう一度お試しください。");
+    } catch (err) {
+      const code = err instanceof Error ? err.message : "";
+      setError(`フィードバックを取得できませんでした。もう一度お試しください。${code ? `(${code})` : ""}`);
     } finally {
       setEnding(false);
     }
