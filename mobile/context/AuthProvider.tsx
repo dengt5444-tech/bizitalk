@@ -1,10 +1,9 @@
-import type { Session, User } from "@supabase/supabase-js";
 import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
-import { supabase } from "@/lib/supabase";
+import { auth, type AuthSession, type AuthUser } from "@/lib/supabase";
 
 type AuthState = {
-  session: Session | null;
-  user: User | null;
+  session: AuthSession | null;
+  user: AuthUser | null;
   initializing: boolean;
   requestOtp: (email: string) => Promise<void>;
   verifyOtp: (email: string, token: string) => Promise<void>;
@@ -14,16 +13,16 @@ type AuthState = {
 const AuthContext = createContext<AuthState | null>(null);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [session, setSession] = useState<Session | null>(null);
+  const [session, setSession] = useState<AuthSession | null>(null);
   const [initializing, setInitializing] = useState(true);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
+    auth.getSession().then(({ data }) => {
       setSession(data.session);
       setInitializing(false);
     });
 
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+    const { data: listener } = auth.onAuthStateChange((nextSession) => {
       setSession(nextSession);
     });
 
@@ -36,14 +35,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       user: session?.user ?? null,
       initializing,
       async requestOtp(email: string) {
-        const { error } = await supabase.auth.signInWithOtp({
+        const { error } = await auth.signInWithOtp({
           email,
           options: { shouldCreateUser: true },
         });
         if (error) throw error;
       },
       async verifyOtp(email: string, token: string) {
-        const { data, error } = await supabase.auth.verifyOtp({
+        const { data, error } = await auth.verifyOtp({
           email,
           token,
           type: "email",
@@ -52,12 +51,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (data.session?.user.email && data.session.user.email !== email) {
           // Guards the same cross-account edge case the web login screen
           // does: never silently continue under the wrong account.
-          await supabase.auth.signOut();
+          await auth.signOut();
           throw new Error("email_mismatch");
         }
       },
       async signOut() {
-        await supabase.auth.signOut();
+        await auth.signOut();
       },
     }),
     [session, initializing],

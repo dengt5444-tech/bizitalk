@@ -1,10 +1,13 @@
 import { STRIPE_PRICE_ID_STANDARD, STRIPE_PRICE_ID_TRIAL, STRIPE_PRICE_ID_UNLIMITED } from "./env";
 import { IAP_PLAN_FOR_PRODUCT_ID } from "./iap";
-import { supabase } from "./supabase";
+import { restOne } from "./supabase";
 
 const ACTIVE_STATUSES = new Set(["active", "trialing"]);
 
 export type ConversationPlan = "trial" | "standard" | "unlimited";
+
+type SubscriptionStatusRow = { status: string };
+type SubscriptionRow = { status: string; price_id: string | null; source: string | null; apple_product_id: string | null };
 
 // Mirrors ../src/lib/entitlements.ts, but queried directly against Supabase
 // (both tables are owner-SELECT-only under RLS, and the signed-in mobile
@@ -13,13 +16,15 @@ export type ConversationPlan = "trial" | "standard" | "unlimited";
 // server: every API route that spends OpenAI/Stripe money re-checks
 // entitlement itself with the full ADMIN_EMAILS-aware logic, so a mobile
 // client being wrong about its own entitlement can only make the UI show
-// (or hide) a lock icon incorrectly, never bypass a paid feature.
+// (or hide) a lock icon incorrectly, never bypass a paid feature. On any
+// query failure, fail closed to "not entitled" rather than throwing —
+// callers render this straight into UI state without a catch.
 export async function hasActiveConversationSubscription(userId: string) {
-  const { data } = await supabase
-    .from("subscriptions")
-    .select("status")
-    .eq("user_id", userId)
-    .maybeSingle();
+  const data = await restOne<SubscriptionStatusRow>(
+    "subscriptions",
+    "status",
+    `user_id=eq.${encodeURIComponent(userId)}`,
+  ).catch(() => null);
   return !!data && ACTIVE_STATUSES.has(data.status);
 }
 
@@ -27,11 +32,11 @@ export async function hasActiveConversationSubscription(userId: string) {
 // ADMIN_EMAILS allowlist, since that's a server-only env var.
 export async function getConversationPlan(userId: string | null | undefined): Promise<ConversationPlan | null> {
   if (!userId) return null;
-  const { data } = await supabase
-    .from("subscriptions")
-    .select("status, price_id, source, apple_product_id")
-    .eq("user_id", userId)
-    .maybeSingle();
+  const data = await restOne<SubscriptionRow>(
+    "subscriptions",
+    "status,price_id,source,apple_product_id",
+    `user_id=eq.${encodeURIComponent(userId)}`,
+  ).catch(() => null);
 
   if (!data || !ACTIVE_STATUSES.has(data.status)) return null;
 

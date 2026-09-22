@@ -4,7 +4,7 @@ import { Alert, View } from "react-native";
 import { Button } from "@/components/ui/Button";
 import { Text } from "@/components/ui/Text";
 import { api } from "@/lib/api";
-import { supabase } from "@/lib/supabase";
+import { auth } from "@/lib/supabase";
 import { useTheme } from "@/theme/ThemeProvider";
 
 export function DangerZone() {
@@ -27,7 +27,7 @@ export function DangerZone() {
     setDeleting(true);
     try {
       await api.post("/api/account/delete");
-      await supabase.auth.signOut();
+      await auth.signOut();
       router.replace("/(tabs)");
     } catch {
       Alert.alert("削除に失敗しました", "しばらくしてからもう一度お試しいただくか、サポートまでご連絡ください。");

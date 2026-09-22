@@ -1,4 +1,4 @@
-import { supabase } from "@/lib/supabase";
+import { restCount, restList } from "@/lib/supabase";
 import type { ConversationFeedback } from "@/lib/conversation";
 
 function dateKey(iso: string) {
@@ -56,21 +56,40 @@ function firstScenario(value: ScenarioRef | ScenarioRef[]): ScenarioRef {
   return Array.isArray(value) ? (value[0] ?? null) : value;
 }
 
+type SessionRow = {
+  id: string;
+  status: string;
+  feedback: ConversationFeedback | null;
+  created_at: string;
+  ended_at: string | null;
+  conversation_scenarios: ScenarioRef | ScenarioRef[];
+};
+
+type ScenarioRow = {
+  slug: string;
+  title: string;
+  persona_name: string;
+  persona_role: string;
+  description: string;
+  order_index: number;
+};
+
 export async function loadDashboard(): Promise<DashboardData> {
-  const [{ data: sessions }, { count: vocabCount }, { data: scenarios }] = await Promise.all([
-    supabase
-      .from("conversation_sessions")
-      .select("id, status, feedback, created_at, ended_at, conversation_scenarios(title, persona_name)")
-      .order("created_at", { ascending: false })
-      .limit(30),
-    supabase.from("saved_words").select("*", { count: "exact", head: true }),
-    supabase
-      .from("conversation_scenarios")
-      .select("slug, title, persona_name, persona_role, description, order_index")
-      .order("order_index", { ascending: true }),
+  const [sessions, vocabCount, scenarios] = await Promise.all([
+    restList<SessionRow>(
+      "conversation_sessions",
+      "id,status,feedback,created_at,ended_at,conversation_scenarios(title,persona_name)",
+      "order=created_at.desc&limit=30",
+    ),
+    restCount("saved_words"),
+    restList<ScenarioRow>(
+      "conversation_scenarios",
+      "slug,title,persona_name,persona_role,description,order_index",
+      "order=order_index.asc",
+    ),
   ]);
 
-  const completed = (sessions ?? []).filter((s) => s.status === "completed");
+  const completed = sessions.filter((s) => s.status === "completed");
 
   const practicedDays = new Set(
     completed.filter((s) => s.ended_at).map((s) => dateKey(s.ended_at as string)),
@@ -110,18 +129,18 @@ export async function loadDashboard(): Promise<DashboardData> {
   });
 
   const practicedTitles = new Set(
-    (sessions ?? [])
+    sessions
       .map((s) => firstScenario(s.conversation_scenarios as ScenarioRef | ScenarioRef[]))
       .filter((s): s is NonNullable<ScenarioRef> => !!s)
       .map((s) => s.title),
   );
-  const recommended = (scenarios ?? []).find((sc) => !practicedTitles.has(sc.title)) ?? (scenarios ?? [])[0] ?? null;
+  const recommended = scenarios.find((sc) => !practicedTitles.has(sc.title)) ?? scenarios[0] ?? null;
 
   return {
     streak,
     thisWeekCount,
     avgFluency,
-    savedWordCount: vocabCount ?? 0,
+    savedWordCount: vocabCount,
     trend,
     recent,
     recommended,

@@ -1,5 +1,5 @@
 import { API_BASE_URL } from "./env";
-import { supabase } from "./supabase";
+import { auth as supabaseAuth } from "./supabase";
 
 export class ApiError extends Error {
   status: number;
@@ -15,7 +15,7 @@ export class ApiError extends Error {
 async function authHeaders(): Promise<Record<string, string>> {
   const {
     data: { session },
-  } = await supabase.auth.getSession();
+  } = await supabaseAuth.getSession();
   if (!session?.access_token) return {};
   return { Authorization: `Bearer ${session.access_token}` };
 }
@@ -48,7 +48,7 @@ async function request<T>(
       // Session expired or was revoked server-side. Sign out so every
       // screen's existing "please log in" gate (driven by useAuth().user)
       // picks this up automatically instead of the UI silently failing.
-      supabase.auth.signOut().catch(() => {});
+      supabaseAuth.signOut().catch(() => {});
     }
     throw new ApiError(response.status, body?.error ?? `http_${response.status}`);
   }

@@ -1,4 +1,4 @@
-import { supabase } from "@/lib/supabase";
+import { restList, restOne } from "@/lib/supabase";
 import type { ConversationFeedback, ConversationTurn } from "@/lib/conversation";
 
 export type HistorySession = {
@@ -17,16 +17,22 @@ function firstScenario(value: ScenarioRef | ScenarioRef[]): ScenarioRef {
   return Array.isArray(value) ? (value[0] ?? null) : value;
 }
 
+type SessionListRow = {
+  id: string;
+  turn_count: number;
+  feedback: ConversationFeedback | null;
+  ended_at: string | null;
+  conversation_scenarios: ScenarioRef | ScenarioRef[];
+};
+
 export async function listCompletedSessions(): Promise<HistorySession[]> {
-  const { data, error } = await supabase
-    .from("conversation_sessions")
-    .select("id, turn_count, feedback, ended_at, conversation_scenarios(title, persona_name, persona_role)")
-    .eq("status", "completed")
-    .order("ended_at", { ascending: false });
+  const data = await restList<SessionListRow>(
+    "conversation_sessions",
+    "id,turn_count,feedback,ended_at,conversation_scenarios(title,persona_name,persona_role)",
+    "status=eq.completed&order=ended_at.desc",
+  );
 
-  if (error) throw error;
-
-  return (data ?? []).map((s) => {
+  return data.map((s) => {
     const scenario = firstScenario(s.conversation_scenarios as ScenarioRef | ScenarioRef[]);
     return {
       id: s.id,
@@ -51,14 +57,21 @@ export type SessionDetail = {
   personaRole: string;
 };
 
-export async function getSessionDetail(id: string): Promise<SessionDetail | null> {
-  const { data, error } = await supabase
-    .from("conversation_sessions")
-    .select("id, transcript, feedback, turn_count, ended_at, conversation_scenarios(title, persona_name, persona_role)")
-    .eq("id", id)
-    .maybeSingle();
+type SessionDetailRow = {
+  id: string;
+  transcript: ConversationTurn[] | null;
+  feedback: ConversationFeedback | null;
+  turn_count: number;
+  ended_at: string | null;
+  conversation_scenarios: ScenarioRef | ScenarioRef[];
+};
 
-  if (error) throw error;
+export async function getSessionDetail(id: string): Promise<SessionDetail | null> {
+  const data = await restOne<SessionDetailRow>(
+    "conversation_sessions",
+    "id,transcript,feedback,turn_count,ended_at,conversation_scenarios(title,persona_name,persona_role)",
+    `id=eq.${encodeURIComponent(id)}`,
+  );
   if (!data || !data.feedback) return null;
 
   const scenario = firstScenario(data.conversation_scenarios as ScenarioRef | ScenarioRef[]);

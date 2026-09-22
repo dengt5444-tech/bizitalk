@@ -1,4 +1,4 @@
-import { supabase } from "@/lib/supabase";
+import { restList, restOne } from "@/lib/supabase";
 import type { ScenarioCategory, ScenarioLevel } from "@/lib/scenarios";
 
 export type ScenarioSummary = {
@@ -23,26 +23,17 @@ export type ScenarioDetail = ScenarioSummary & {
 };
 
 export async function listScenarios(): Promise<ScenarioSummary[]> {
-  const { data, error } = await supabase
-    .from("conversation_scenarios")
-    .select(
-      "id, slug, title, description, category, level, persona_name, persona_role, is_free, order_index, estimated_minutes",
-    )
-    .order("order_index", { ascending: true });
-
-  if (error) throw error;
-  return (data ?? []) as ScenarioSummary[];
+  return restList<ScenarioSummary>(
+    "conversation_scenarios",
+    "id,slug,title,description,category,level,persona_name,persona_role,is_free,order_index,estimated_minutes",
+    "order=order_index.asc",
+  );
 }
 
 export async function getScenarioBySlug(slug: string): Promise<ScenarioDetail | null> {
-  const { data, error } = await supabase
-    .from("conversation_scenarios")
-    .select(
-      "id, slug, title, description, category, level, persona_name, persona_role, persona_background, opening_line, is_free, order_index, estimated_minutes, briefing_en, briefing_ja",
-    )
-    .eq("slug", slug)
-    .maybeSingle();
-
-  if (error) throw error;
-  return data as ScenarioDetail | null;
+  return restOne<ScenarioDetail>(
+    "conversation_scenarios",
+    "id,slug,title,description,category,level,persona_name,persona_role,persona_background,opening_line,is_free,order_index,estimated_minutes,briefing_en,briefing_ja",
+    `slug=eq.${encodeURIComponent(slug)}`,
+  );
 }
