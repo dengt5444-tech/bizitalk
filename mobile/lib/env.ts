@@ -1,24 +1,22 @@
-function required(name: string, value: string | undefined): string {
-  if (!value) {
-    throw new Error(
-      `Missing ${name}. Copy mobile/.env.example to mobile/.env and fill it in.`,
-    );
-  }
-  return value;
+// These three values are verified correct and stable (confirmed to match
+// the live production website's own bundled Supabase project). They are
+// still read from EXPO_PUBLIC_* build-time env vars first, as before, but
+// now fall back to these known-good values if a build somehow doesn't have
+// them injected — an anon key is public/safe to ship in source (same as
+// how the website itself embeds it), so this closes off "the build didn't
+// get the right env vars" as a way for the app to end up broken.
+const FALLBACK_SUPABASE_URL = "https://blhmyhyhiclgvtxiqxpp.supabase.co";
+const FALLBACK_SUPABASE_ANON_KEY =
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJsaG15aHloaWNsZ3Z0eGlxeHBwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg5Nzc5OTEsImV4cCI6MjEwNDU1Mzk5MX0.-xHJdp2esI78JSEDB9s07Uq84JVmHrnKtKuKDd2zxds";
+const FALLBACK_API_BASE_URL = "https://bizitalkapp.com";
+
+function resolve(value: string | undefined, fallback: string): string {
+  return value && value.length > 0 ? value : fallback;
 }
 
-export const SUPABASE_URL = required(
-  "EXPO_PUBLIC_SUPABASE_URL",
-  process.env.EXPO_PUBLIC_SUPABASE_URL,
-);
-export const SUPABASE_ANON_KEY = required(
-  "EXPO_PUBLIC_SUPABASE_ANON_KEY",
-  process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY,
-);
-export const API_BASE_URL = required(
-  "EXPO_PUBLIC_API_BASE_URL",
-  process.env.EXPO_PUBLIC_API_BASE_URL,
-).replace(/\/$/, "");
+export const SUPABASE_URL = resolve(process.env.EXPO_PUBLIC_SUPABASE_URL, FALLBACK_SUPABASE_URL);
+export const SUPABASE_ANON_KEY = resolve(process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY, FALLBACK_SUPABASE_ANON_KEY);
+export const API_BASE_URL = resolve(process.env.EXPO_PUBLIC_API_BASE_URL, FALLBACK_API_BASE_URL).replace(/\/$/, "");
 
 // Stripe Price IDs aren't secret (they're routinely exposed to clients in
 // Stripe.js integrations) — only used here to tell which AI conversation
