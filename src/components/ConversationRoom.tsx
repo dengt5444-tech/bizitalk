@@ -252,6 +252,22 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
   // doesn't need to resemble anything to be rejected, the timing alone is
   // disqualifying.
   const speechOverlappedAssistantRef = useRef(false);
+  // A reported "sniffling makes it stop" turned out to be a real gap: a
+  // response can stream its audio transcript across more than one item
+  // (a delta/done cycle per item, not one per response), so keying
+  // assistantSpeakingRef off the transcript-level done event could flip it
+  // false — and re-enable the mic — in a brief gap between items while the
+  // AI was still actively replying overall. A stray sound in exactly that
+  // gap (a sniffle, a breath) would then be picked up as a genuine turn
+  // and fire a second response.create, cutting the reply off. The
+  // response-level response.created/response.done events (see below)
+  // bracket the AI's ENTIRE reply regardless of how many items it's split
+  // into, so those are what actually gate the mic now. This timer is a
+  // safety net for the response.done side specifically: if it never
+  // arrives for some reason, the mic would otherwise stay disabled for
+  // the rest of the session — far worse than the bug being fixed — so
+  // this forces a recovery after a generous timeout instead.
+  const responseSafetyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // The session is created with a seeded opening-line message already shown
   // on screen (so it renders instantly, without waiting on the model). The
   // realtime API is then asked to actually speak that same line; this flag
@@ -284,6 +300,10 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
   }, [messages]);
 
   function closeRealtimeConnection() {
+    if (responseSafetyTimerRef.current) {
+      clearTimeout(responseSafetyTimerRef.current);
+      responseSafetyTimerRef.current = null;
+    }
     try {
       dcRef.current?.close();
     } catch {
@@ -442,6 +462,38 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
     stream.getTracks().forEach((track) => (track.enabled = shouldBeEnabled));
   }
 
+  // Brackets the AI's whole reply (response.created → response.done), not
+  // any single item within it — see the comment on responseSafetyTimerRef
+  // for why item-level events aren't safe to gate the mic on. The timeout
+  // is a recovery path in case response.done never arrives for some
+  // reason; ordinary replies are a few short sentences, so 20s is already
+  // generous, and firing it just re-enables the mic a little early rather
+  // than breaking anything.
+  function beginAssistantResponse() {
+    assistantSpeakingRef.current = true;
+    setAssistantSpeaking(true);
+    syncMicEnabled();
+    if (responseSafetyTimerRef.current) clearTimeout(responseSafetyTimerRef.current);
+    responseSafetyTimerRef.current = setTimeout(() => {
+      responseSafetyTimerRef.current = null;
+      if (!assistantSpeakingRef.current) return;
+      Sentry.captureMessage("realtime voice: response.done never arrived", {
+        level: "warning",
+      });
+      endAssistantResponse();
+    }, 20000);
+  }
+
+  function endAssistantResponse() {
+    if (responseSafetyTimerRef.current) {
+      clearTimeout(responseSafetyTimerRef.current);
+      responseSafetyTimerRef.current = null;
+    }
+    assistantSpeakingRef.current = false;
+    setAssistantSpeaking(false);
+    syncMicEnabled();
+  }
+
   function playAudio(index: number) {
     if (!sessionId || !audioRef.current) return;
     audioRef.current.srcObject = null;
@@ -516,23 +568,34 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
             : 0;
           lastSpeechStartedAtRef.current = null;
           break;
+        case "response.created":
+          // The authoritative "AI is speaking" signal — brackets the
+          // whole reply regardless of how many items/parts it streams
+          // across. See beginAssistantResponse and the comment on
+          // responseSafetyTimerRef for why this replaced the item-level
+          // transcript delta/done events for this purpose.
+          beginAssistantResponse();
+          break;
         case "response.output_audio_transcript.delta":
         case "response.audio_transcript.delta":
-          assistantSpeakingRef.current = true;
+          // response.created already gates the mic; this is kept only as
+          // a harmless, redundant nudge to the visible "AI speaking"
+          // indicator in case created was somehow missed.
           setAssistantSpeaking(true);
-          // Mic goes silent for as long as the AI is actually talking —
-          // see syncMicEnabled for why this is the real fix for the AI
-          // hearing (and reacting to) its own voice.
-          syncMicEnabled();
           break;
         case "response.output_audio_transcript.done":
         case "response.audio_transcript.done":
-          assistantSpeakingRef.current = false;
-          setAssistantSpeaking(false);
-          syncMicEnabled();
+          // No longer touches assistantSpeakingRef/the mic — a response
+          // can have more than one of these, and it was re-enabling the
+          // mic in the gap between them while the AI was still actively
+          // replying overall (response.done below is what the reply's
+          // end is actually keyed on now).
           if (typeof msg.transcript === "string") {
             appendRealtimeTurn("assistant", msg.transcript.trim(), msg.item_id);
           }
+          break;
+        case "response.done":
+          endAssistantResponse();
           break;
         case "conversation.item.input_audio_transcription.completed": {
           // Automatic response generation is turned off server-side (see
@@ -627,6 +690,15 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
           break;
         case "error":
           console.error("realtime session error", msg);
+          Sentry.captureMessage("realtime voice: server error event", {
+            level: "warning",
+            extra: { assistantSpeaking: assistantSpeakingRef.current, error: msg },
+          });
+          // An error can terminate the current response without a normal
+          // response.done ever arriving — if that leaves assistantSpeakingRef
+          // stuck true, the mic would stay disabled for the rest of the
+          // session, so unconditionally recover here too.
+          if (assistantSpeakingRef.current) endAssistantResponse();
           break;
         default:
           break;
