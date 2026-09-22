@@ -10,7 +10,6 @@ import { ErrorState } from "@/components/ui/ErrorState";
 import { ScreenScroll } from "@/components/ui/ScreenContainer";
 import { Heading, Text } from "@/components/ui/Text";
 import { useAuth } from "@/context/AuthProvider";
-import { isEntitled } from "@/lib/entitlements";
 import { CATEGORY_LABELS, LEVEL_LABELS, type ScenarioCategory, type ScenarioLevel } from "@/lib/scenarios";
 import { getScenarioBySlug, type ScenarioDetail } from "@/lib/queries/scenarios";
 
@@ -20,7 +19,6 @@ export default function ConversationScenarioScreen() {
   const { user } = useAuth();
   const [scenario, setScenario] = useState<ScenarioDetail | null | undefined>(undefined);
   const [loadError, setLoadError] = useState(false);
-  const [subscribed, setSubscribed] = useState(false);
 
   const reload = useCallback(() => {
     if (typeof slug !== "string") return Promise.resolve();
@@ -35,10 +33,6 @@ export default function ConversationScenarioScreen() {
   useEffect(() => {
     reload();
   }, [reload]);
-
-  useEffect(() => {
-    isEntitled(user?.id).then(setSubscribed);
-  }, [user]);
 
   if (scenario === undefined) {
     if (loadError) {
@@ -64,15 +58,16 @@ export default function ConversationScenarioScreen() {
   }
 
   // Conversation practice always needs an account (each session is saved
-  // per-user), so login is required even for the free scenario.
-  const unlocked = !!user && (scenario.is_free || subscribed);
+  // per-user, and usage is tracked per-user for the monthly minutes cap),
+  // but every scenario is open to any signed-in user — a plan only changes
+  // how many minutes/month they get.
+  const unlocked = !!user;
 
   return (
     <ScreenScroll contentContainerStyle={{ gap: 16 }}>
       <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
         <Badge label={CATEGORY_LABELS[(scenario.category as ScenarioCategory) ?? "teammates"]} accent="neutral" />
         <Badge label={LEVEL_LABELS[(scenario.level as ScenarioLevel) ?? "beginner"]} accent="signal" />
-        {scenario.is_free && <Badge label="無料お試し" accent="amber" />}
       </View>
 
       <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
@@ -105,17 +100,12 @@ export default function ConversationScenarioScreen() {
         />
       ) : (
         <Card style={{ alignItems: "center", gap: 8, paddingVertical: 32 }}>
-          <Heading level={4}>{!user ? "ログインが必要です" : "このシーンはロックされています"}</Heading>
+          <Heading level={4}>ログインが必要です</Heading>
           <Text size={13} color="inkSoft" style={{ textAlign: "center" }}>
-            {!user
-              ? scenario.is_free
-                ? "この無料シーンを試すには、ログインが必要です。"
-                : "ログインの上、有料プランへの登録が必要です。"
-              : "有料プランへの登録で全シーンが練習できます。"}
+            ログインすれば、このシーンも月5分まで無料でお試しいただけます。
           </Text>
           <View style={{ flexDirection: "row", gap: 10, marginTop: 8 }}>
-            {!user && <Button label="ログイン" variant="secondary" onPress={() => router.push("/login")} />}
-            <Button label="料金プランを見る" onPress={() => router.push("/(tabs)/mypage")} />
+            <Button label="ログイン" variant="secondary" onPress={() => router.push("/login")} />
           </View>
         </Card>
       )}

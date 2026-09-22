@@ -2,7 +2,7 @@ import Link from "next/link";
 import { ArrowLeft, BookOpen, Clock } from "lucide-react";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { getCurrentUser, isEntitled } from "@/lib/entitlements";
+import { getCurrentUser } from "@/lib/entitlements";
 import { ConversationRoom } from "@/components/ConversationRoom";
 import { Avatar } from "@/components/Avatar";
 import {
@@ -36,10 +36,11 @@ export default async function ConversationScenarioPage({
   }
 
   const user = await getCurrentUser();
-  const subscribed = await isEntitled(user);
   // Conversation practice always needs an account (each session is saved
-  // per-user), so login is required even for the free scenario.
-  const unlocked = !!user && (scenario.is_free || subscribed);
+  // per-user, and usage is tracked per-user for the monthly minutes cap),
+  // but every scenario is open to any signed-in user — a plan only changes
+  // how many minutes/month they get (FREE_MINUTES_PER_MONTH with no plan).
+  const unlocked = !!user;
 
   return (
     <main className="mx-auto max-w-2xl px-6 py-14 sm:py-20">
@@ -69,11 +70,6 @@ export default async function ConversationScenarioPage({
           <span className="inline-flex items-center gap-1 rounded-full bg-paper-dim px-3 py-1 text-xs font-medium text-ink-faint">
             <Clock size={12} strokeWidth={2} />
             目安 {scenario.estimated_minutes}分
-          </span>
-        )}
-        {scenario.is_free && (
-          <span className="inline-block rounded-full bg-amber-tint px-3 py-1 text-xs font-semibold text-amber-dim">
-            無料お試し
           </span>
         )}
       </div>
@@ -123,14 +119,10 @@ export default async function ConversationScenarioPage({
         ) : (
           <div className="rounded-3xl bg-paper-dim p-8 text-center shadow-card">
             <p className="font-display font-semibold text-ink">
-              {!user ? "ログインが必要です" : "このシーンはロックされています"}
+              ログインが必要です
             </p>
             <p className="mt-2 text-sm text-ink-soft">
-              {!user
-                ? scenario.is_free
-                  ? "この無料シーンを試すには、ログインが必要です。"
-                  : "ログインの上、有料プランへの登録が必要です。"
-                : "有料プランへの登録で全シーンが練習できます。"}
+              ログインすれば、このシーンも月5分まで無料でお試しいただけます。
             </p>
             <div className="mt-6 flex justify-center gap-3">
               {!user && (

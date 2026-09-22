@@ -10,7 +10,6 @@ import { SkeletonList } from "@/components/ui/Skeleton";
 import { Heading, Text } from "@/components/ui/Text";
 import { useAuth } from "@/context/AuthProvider";
 import { useTheme } from "@/theme/ThemeProvider";
-import { isEntitled } from "@/lib/entitlements";
 import { FREE_TALK_SLUG } from "@/lib/conversation";
 import { CATEGORY_DESCRIPTIONS, CATEGORY_LABELS, CATEGORY_ORDER, LEVEL_LABELS, type ScenarioCategory, type ScenarioLevel } from "@/lib/scenarios";
 import { listScenarios, type ScenarioSummary } from "@/lib/queries/scenarios";
@@ -21,7 +20,6 @@ export default function ConversationScreen() {
   const { user } = useAuth();
   const [scenarios, setScenarios] = useState<ScenarioSummary[] | null>(null);
   const [loadError, setLoadError] = useState(false);
-  const [subscribed, setSubscribed] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
   const reload = useCallback(() => {
@@ -36,10 +34,6 @@ export default function ConversationScreen() {
   useEffect(() => {
     reload();
   }, [reload]);
-
-  useEffect(() => {
-    isEntitled(user?.id).then(setSubscribed);
-  }, [user]);
 
   async function handleRefresh() {
     setRefreshing(true);
@@ -65,7 +59,7 @@ export default function ConversationScreen() {
     );
   }
 
-  const loggedInAndEntitled = (isFree: boolean) => !!user && (isFree || subscribed);
+  const unlocked = !!user;
   const freeTalk = scenarios.find((s) => s.slug === FREE_TALK_SLUG) ?? null;
 
   const groups = new Map<ScenarioCategory, ScenarioSummary[]>();
@@ -92,6 +86,9 @@ export default function ConversationScreen() {
         <Text color="inkSoft" style={{ marginTop: 6, lineHeight: 20 }}>
           誰と、どんな場面で話すかで英語は変わります。相手役ごとにキャラクター設定されたAIと練習し、会話が終わるとAIコーチがフィードバックしてくれます。
         </Text>
+        <Text size={13} color="inkFaint" style={{ marginTop: 6 }}>
+          ログインすれば、どのシーンも月5分まで無料でお試しいただけます。
+        </Text>
       </View>
 
       {loadError && (
@@ -110,13 +107,13 @@ export default function ConversationScreen() {
             <Text weight="semibold" style={{ flex: 1 }}>
               {freeTalk.title}
             </Text>
-            {!loggedInAndEntitled(freeTalk.is_free) && <Badge label="ロック中" accent="neutral" />}
+            {!unlocked && <Badge label="ログインが必要" accent="neutral" />}
           </View>
           <Text size={13} color="inkSoft" style={{ lineHeight: 18 }}>
             {freeTalk.description}
           </Text>
           <Text size={13} color="signal" weight="medium">
-            {loggedInAndEntitled(freeTalk.is_free) ? "話してみる →" : "詳細を見る →"}
+            {unlocked ? "話してみる →" : "詳細を見る →"}
           </Text>
         </PressableCard>
       )}
@@ -140,7 +137,6 @@ export default function ConversationScreen() {
             </View>
 
             {items.map((scenario) => {
-              const unlocked = loggedInAndEntitled(scenario.is_free);
               return (
                 <PressableCard
                   key={scenario.id}
@@ -164,7 +160,7 @@ export default function ConversationScreen() {
                     <Text size={13} color="signal" weight="medium">
                       {unlocked ? "話してみる →" : "詳細を見る →"}
                     </Text>
-                    {scenario.is_free && <Badge label="無料" accent="amber" />}
+                    {!unlocked && <Badge label="ログインが必要" accent="neutral" />}
                   </View>
                 </PressableCard>
               );

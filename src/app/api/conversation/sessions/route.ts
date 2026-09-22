@@ -54,10 +54,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "not_found" }, { status: 404 });
   }
 
-  if (!scenario.is_free && plan === null) {
-    return NextResponse.json({ error: "payment_required" }, { status: 403 });
-  }
-
+  // Any signed-in user can try any scenario — access isn't gated per
+  // scenario. What differs by plan is purely how many minutes/month they
+  // get: FREE_MINUTES_PER_MONTH for no plan, a larger cap per paid tier
+  // (see minutesCapFor below).
   const capMinutes = minutesCapFor(plan);
   if (capMinutes !== null) {
     const usedSeconds = (usageRows ?? []).reduce(

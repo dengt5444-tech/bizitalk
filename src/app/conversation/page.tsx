@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ArrowRight, ChevronDown, Clock } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import { getCurrentUser, isEntitled } from "@/lib/entitlements";
+import { getCurrentUser } from "@/lib/entitlements";
 import { Avatar } from "@/components/Avatar";
 import { CategoryIllustration } from "@/components/illustrations/CategoryIllustration";
 import { SceneIllustration } from "@/components/illustrations/SceneIllustration";
@@ -30,10 +30,11 @@ export default async function ConversationPage() {
     getCurrentUser(),
   ]);
 
-  const subscribed = await isEntitled(user);
-  // Conversation practice always needs an account, so login is required
-  // even for the free scenario.
-  const loggedInAndEntitled = (isFree: boolean) => !!user && (isFree || subscribed);
+  // Conversation practice always needs an account (each session is saved
+  // per-user, and usage is tracked per-user for the monthly minutes cap),
+  // but every scenario is open to any signed-in user — a plan only changes
+  // how many minutes/month they get (FREE_MINUTES_PER_MONTH with no plan).
+  const unlocked = !!user;
 
   const freeTalk = (scenarios ?? []).find((s) => s.slug === FREE_TALK_SLUG) ?? null;
 
@@ -60,6 +61,9 @@ export default async function ConversationPage() {
       <p className="mt-3 max-w-xl text-ink-soft">
         誰と、どんな場面で話すかで英語は変わります。CEOへの報告、海外の同僚との日々のやり取り、取引先との交渉——相手役ごとにキャラクター設定されたAIとリアルタイム音声で練習し、会話が終わるとAIコーチがフィードバックしてくれます。
       </p>
+      <p className="mt-2 max-w-xl text-sm text-ink-faint">
+        ログインすれば、どのシーンも月5分まで無料でお試しいただけます。
+      </p>
 
       {freeTalk && (
         <Link
@@ -78,9 +82,9 @@ export default async function ConversationPage() {
               <p className="font-display font-semibold text-ink group-hover:text-signal">
                 {freeTalk.title}
               </p>
-              {!loggedInAndEntitled(freeTalk.is_free) && (
+              {!unlocked && (
                 <span className="rounded-full bg-surface px-2.5 py-1 text-xs font-semibold text-ink-soft shadow-sm">
-                  ロック中
+                  ログインが必要
                 </span>
               )}
             </div>
@@ -89,7 +93,7 @@ export default async function ConversationPage() {
             </p>
           </div>
           <p className="inline-flex shrink-0 items-center gap-1 text-sm font-medium text-signal sm:self-center">
-            {loggedInAndEntitled(freeTalk.is_free) ? "話してみる" : "詳細を見る"}
+            {unlocked ? "話してみる" : "詳細を見る"}
             <ArrowRight size={16} strokeWidth={2} />
           </p>
         </Link>
@@ -124,7 +128,6 @@ export default async function ConversationPage() {
 
               <ul className="grid gap-4 sm:grid-cols-2">
                 {items.map((scenario) => {
-                  const unlocked = loggedInAndEntitled(scenario.is_free);
                   const scene = SCENARIO_SCENES[scenario.slug] ?? "meeting";
                   return (
                     <li key={scenario.id}>
@@ -141,15 +144,11 @@ export default async function ConversationPage() {
                             <span className="rounded-full bg-surface px-2.5 py-1 text-xs font-semibold text-ink shadow-sm">
                               {LEVEL_LABELS[(scenario.level as ScenarioLevel) ?? "beginner"]}
                             </span>
-                            {scenario.is_free ? (
-                              <span className="rounded-full bg-amber-tint px-2.5 py-1 text-xs font-semibold text-amber-dim">
-                                無料
-                              </span>
-                            ) : !unlocked ? (
+                            {!unlocked && (
                               <span className="rounded-full bg-surface px-2.5 py-1 text-xs font-semibold text-ink-soft shadow-sm">
-                                ロック中
+                                ログインが必要
                               </span>
-                            ) : null}
+                            )}
                           </div>
                         </div>
                         <div className="flex flex-1 flex-col justify-between p-5">
