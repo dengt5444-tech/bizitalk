@@ -36,7 +36,7 @@ export default function ConversationScreen() {
       })
       .catch((err) => {
         setLoadError(true);
-        setLoadErrorDetail(err instanceof Error ? `${err.name}: ${err.message}` : String(err));
+        setLoadErrorDetail(err instanceof Error ? err.message : "");
       });
   }, []);
 
@@ -70,12 +70,7 @@ export default function ConversationScreen() {
     if (loadError) {
       return (
         <ScreenScroll contentContainerStyle={{ gap: 28 }}>
-          <ErrorState onRetry={reload} />
-          {!!loadErrorDetail && (
-            <Text size={11} color="rose" style={{ padding: 10, borderWidth: 1, borderColor: theme.colors.rose }}>
-              [DEBUG] {loadErrorDetail}
-            </Text>
-          )}
+          <ErrorState onRetry={reload} message={loadErrorDetail || undefined} />
         </ScreenScroll>
       );
     }

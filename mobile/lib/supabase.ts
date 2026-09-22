@@ -1,6 +1,40 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { SUPABASE_ANON_KEY, SUPABASE_URL } from "./env";
 
+const REQUEST_TIMEOUT_MS = 15_000;
+
+// A network failure inside the app that isn't a normal HTTP error response
+// (DNS/TLS/connectivity failure, or the request timing out) — surfaced with
+// a distinct message so it reads differently from "the server said no" and
+// is diagnosable without needing to inspect logs on the device.
+export class NetworkError extends Error {
+  constructor(cause: "timeout" | "offline") {
+    super(
+      cause === "timeout"
+        ? "通信がタイムアウトしました。電波の良い場所でもう一度お試しください。"
+        : "サーバーに接続できませんでした。通信環境をご確認ください。",
+    );
+    this.name = "NetworkError";
+  }
+}
+
+// Every request in this file goes through this: a fixed timeout (so a
+// hung connection fails visibly instead of spinning forever) and a single
+// place that turns "fetch threw" into a message that distinguishes a
+// timeout from no connectivity at all, instead of both looking identical.
+async function timedFetch(url: string, init?: RequestInit): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  try {
+    return await fetch(url, { ...init, signal: controller.signal });
+  } catch (err) {
+    if (err instanceof Error && err.name === "AbortError") throw new NetworkError("timeout");
+    throw new NetworkError("offline");
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 // This used to go through the @supabase/supabase-js client. That library's
 // behavior on this device could not be reproduced outside the app (the
 // exact same requests succeeded via curl and via the same library version
@@ -60,7 +94,7 @@ function toSession(json: {
 }
 
 async function authRequest(path: string, body: unknown) {
-  const response = await fetch(`${SUPABASE_URL}/auth/v1${path}`, {
+  const response = await timedFetch(`${SUPABASE_URL}/auth/v1${path}`, {
     method: "POST",
     headers: { "Content-Type": "application/json", apikey: SUPABASE_ANON_KEY },
     body: JSON.stringify(body),
@@ -170,7 +204,8 @@ async function restHeaders(): Promise<Record<string, string>> {
 
 async function parseRestError(response: Response): Promise<Error> {
   const body = await response.json().catch(() => null);
-  return new Error((body && (body.message || body.error)) || `rest_${response.status}`);
+  const detail = body && (body.message || body.error);
+  return new Error(`サーバーとの通信に失敗しました(エラーコード: ${response.status}${detail ? ` / ${detail}` : ""})`);
 }
 
 // Mirrors supabase-js's `.from(table).select(select)...` for a list result.
@@ -179,7 +214,7 @@ async function parseRestError(response: Response): Promise<Error> {
 export async function restList<T>(table: string, select: string, query?: string): Promise<T[]> {
   const params = new URLSearchParams({ select });
   const url = `${SUPABASE_URL}/rest/v1/${table}?${params.toString()}${query ? `&${query}` : ""}`;
-  const response = await fetch(url, { headers: await restHeaders() });
+  const response = await timedFetch(url, { headers: await restHeaders() });
   if (!response.ok) throw await parseRestError(response);
   return (await response.json()) as T[];
 }
@@ -195,7 +230,7 @@ export async function restOne<T>(table: string, select: string, query: string): 
 export async function restCount(table: string, query?: string): Promise<number> {
   const params = new URLSearchParams({ select: "id" });
   const url = `${SUPABASE_URL}/rest/v1/${table}?${params.toString()}${query ? `&${query}` : ""}`;
-  const response = await fetch(url, {
+  const response = await timedFetch(url, {
     method: "HEAD",
     headers: { ...(await restHeaders()), Prefer: "count=exact" },
   });

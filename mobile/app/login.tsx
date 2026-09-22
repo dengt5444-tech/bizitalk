@@ -9,31 +9,6 @@ import { Heading, Text } from "@/components/ui/Text";
 import { useAuth } from "@/context/AuthProvider";
 import { useTheme } from "@/theme/ThemeProvider";
 
-// TEMPORARY diagnostic — shows exactly what got embedded into this build at
-// bundle time, to tell a real missing/wrong-value bug apart from anything
-// else. Remove once the login issue is confirmed fixed.
-function EnvDebugBox() {
-  const url = process.env.EXPO_PUBLIC_SUPABASE_URL;
-  const key = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
-  const api = process.env.EXPO_PUBLIC_API_BASE_URL;
-  const describe = (v: string | undefined) =>
-    v === undefined ? "未定義(undefined)" : v === "" ? "空文字" : `"${v}"`;
-  return (
-    <View style={{ borderWidth: 1, borderColor: "red", padding: 10, gap: 4 }}>
-      <Text size={11} color="rose">
-        [DEBUG] URL: {describe(url)}
-      </Text>
-      <Text size={11} color="rose">
-        [DEBUG] API: {describe(api)}
-      </Text>
-      <Text size={11} color="rose">
-        [DEBUG] KEY length: {key ? key.length : describe(key)}
-        {key ? ` / 先頭: ${key.slice(0, 8)} / 末尾: ${key.slice(-8)}` : ""}
-      </Text>
-    </View>
-  );
-}
-
 type Stage = "email" | "sent";
 
 export default function LoginScreen() {
@@ -93,8 +68,6 @@ export default function LoginScreen() {
               メールアドレスを入力すると、6桁のログインコードをお送りします。
             </Text>
           </View>
-
-          <EnvDebugBox />
 
           {stage === "email" ? (
             <View style={{ gap: 12 }}>
