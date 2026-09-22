@@ -276,6 +276,12 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
   async function handleSend() {
     const text = inputText.trim();
     if (!text || !sessionId || sending || turnLimitReached) return;
+    // In voice mode, this is the type-instead-of-speak fallback — sending
+    // while the AI is still talking would fire a second response.create
+    // while the first is still actively generating and cut it off. The
+    // input is already disabled while assistantSpeaking for this same
+    // reason; this is a second guard against enqueued sends beating that.
+    if (mode === "realtime" && assistantSpeaking) return;
 
     setInputText("");
     setError(null);
@@ -558,7 +564,7 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
             value={inputText}
             onChangeText={setInputText}
             placeholder="マイクで話すか、代わりにここに入力できます"
-            editable={!turnLimitReached}
+            editable={!turnLimitReached && !assistantSpeaking}
             style={{ flex: 1 }}
           />
           <Pressable
