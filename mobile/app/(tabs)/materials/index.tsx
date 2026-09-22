@@ -15,6 +15,7 @@ export default function MaterialsScreen() {
   const router = useRouter();
   const [materials, setMaterials] = useState<MaterialSummary[] | null>(null);
   const [loadError, setLoadError] = useState(false);
+  const [loadErrorDetail, setLoadErrorDetail] = useState("");
   const [refreshing, setRefreshing] = useState(false);
 
   const reload = useCallback(() => {
@@ -22,8 +23,12 @@ export default function MaterialsScreen() {
       .then((data) => {
         setMaterials(data);
         setLoadError(false);
+        setLoadErrorDetail("");
       })
-      .catch(() => setLoadError(true));
+      .catch((err) => {
+        setLoadError(true);
+        setLoadErrorDetail(err instanceof Error ? `${err.name}: ${err.message}` : String(err));
+      });
   }, []);
 
   useEffect(() => {
@@ -54,6 +59,11 @@ export default function MaterialsScreen() {
       return (
         <ScreenScroll contentContainerStyle={{ gap: 28 }}>
           <ErrorState onRetry={reload} />
+          {!!loadErrorDetail && (
+            <Text size={11} color="rose" style={{ padding: 10, borderWidth: 1, borderColor: theme.colors.rose }}>
+              [DEBUG] {loadErrorDetail}
+            </Text>
+          )}
         </ScreenScroll>
       );
     }

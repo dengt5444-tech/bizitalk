@@ -22,6 +22,7 @@ export default function ConversationScreen() {
   const { user } = useAuth();
   const [scenarios, setScenarios] = useState<ScenarioSummary[] | null>(null);
   const [loadError, setLoadError] = useState(false);
+  const [loadErrorDetail, setLoadErrorDetail] = useState("");
   const [subscribed, setSubscribed] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [collapsed, setCollapsed] = useState<Set<ScenarioCategory>>(new Set());
@@ -31,8 +32,12 @@ export default function ConversationScreen() {
       .then((data) => {
         setScenarios(data);
         setLoadError(false);
+        setLoadErrorDetail("");
       })
-      .catch(() => setLoadError(true));
+      .catch((err) => {
+        setLoadError(true);
+        setLoadErrorDetail(err instanceof Error ? `${err.name}: ${err.message}` : String(err));
+      });
   }, []);
 
   useEffect(() => {
@@ -66,6 +71,11 @@ export default function ConversationScreen() {
       return (
         <ScreenScroll contentContainerStyle={{ gap: 28 }}>
           <ErrorState onRetry={reload} />
+          {!!loadErrorDetail && (
+            <Text size={11} color="rose" style={{ padding: 10, borderWidth: 1, borderColor: theme.colors.rose }}>
+              [DEBUG] {loadErrorDetail}
+            </Text>
+          )}
         </ScreenScroll>
       );
     }
