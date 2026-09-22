@@ -53,12 +53,46 @@ export async function POST(
     return NextResponse.json({ error: "not_found" }, { status: 404 });
   }
 
-  if (session.status === "completed" && session.feedback) {
-    return NextResponse.json({ feedback: session.feedback });
+  if (session.status === "completed") {
+    return NextResponse.json({ feedback: session.feedback ?? null });
   }
 
+  // Duration counted against the monthly minutes cap: from when the
+  // realtime voice connection started (server-recorded, not client-reported)
+  // for a voice session, or from session creation for a text-only session.
+  // Clamped so a session left open unusually long doesn't eat an outsized
+  // share of the month's allowance. Computed up front so it's recorded
+  // even when the learner leaves before saying anything — the real
+  // OpenAI cost of a voice session (at minimum, the opening line) is
+  // already incurred by then and needs to count against their quota
+  // regardless of whether there's a transcript worth giving feedback on.
+  const startedAt = session.realtime_started_at ?? session.created_at;
+  const durationSeconds = Math.min(
+    MAX_SESSION_DURATION_SECONDS,
+    Math.max(0, Math.round((Date.now() - new Date(startedAt).getTime()) / 1000)),
+  );
+
   if (session.turn_count < 1) {
-    return NextResponse.json({ error: "not_enough_turns" }, { status: 400 });
+    // Nothing was actually said — leaving early rather than a bug to
+    // reject. Close the session out (so it stops looking "active" and
+    // its duration is recorded) without attempting feedback, since
+    // there's no transcript to analyze.
+    const { error: closeError } = await supabase
+      .from("conversation_sessions")
+      .update({
+        status: "completed",
+        duration_seconds: durationSeconds,
+        ended_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", id)
+      .eq("user_id", user.id);
+
+    if (closeError) {
+      return NextResponse.json({ error: closeError.message }, { status: 500 });
+    }
+
+    return NextResponse.json({ feedback: null });
   }
 
   const scenario = Array.isArray(session.conversation_scenarios)
@@ -109,17 +143,6 @@ export async function POST(
   } catch {
     return NextResponse.json({ error: "feedback_parse_failed" }, { status: 502 });
   }
-
-  // Duration counted against the monthly minutes cap: from when the
-  // realtime voice connection started (server-recorded, not client-reported)
-  // for a voice session, or from session creation for a text-only session.
-  // Clamped so a session left open unusually long doesn't eat an outsized
-  // share of the month's allowance.
-  const startedAt = session.realtime_started_at ?? session.created_at;
-  const durationSeconds = Math.min(
-    MAX_SESSION_DURATION_SECONDS,
-    Math.max(0, Math.round((Date.now() - new Date(startedAt).getTime()) / 1000)),
-  );
 
   const { error } = await supabase
     .from("conversation_sessions")

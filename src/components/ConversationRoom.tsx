@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import * as Sentry from "@sentry/nextjs";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Check, Lightbulb, Loader2, Mic, MicOff, Play, X } from "lucide-react";
 import type {
   ConversationFeedback,
@@ -149,6 +150,7 @@ function extractItemText(item: RealtimeConversationItem): string {
 }
 
 export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
+  const router = useRouter();
   const [phase, setPhase] = useState<Phase>("idle");
   const [mode, setMode] = useState<Mode | null>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
@@ -958,6 +960,15 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error ?? "end_failed");
 
+      if (!data.feedback) {
+        // Left before saying anything — there's no transcript to give
+        // feedback on, so this is a clean exit rather than a completed
+        // session: back to the scene list instead of a feedback panel
+        // with nothing in it.
+        router.push("/conversation");
+        return;
+      }
+
       setFeedback(data.feedback);
       setPhase("ended");
     } catch {
@@ -1214,10 +1225,14 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
               <button
                 type="button"
                 onClick={handleEnd}
-                disabled={turnCount < 1 || ending}
+                disabled={ending}
                 className="w-full rounded-full border border-line px-4 py-2.5 text-sm font-medium text-ink transition hover:border-ink-faint disabled:cursor-not-allowed disabled:opacity-40"
               >
-                {ending ? "フィードバックを作成中..." : "会話を終えてフィードバックを見る"}
+                {ending
+                  ? "処理中..."
+                  : turnCount < 1
+                    ? "退室する"
+                    : "会話を終えてフィードバックを見る"}
               </button>
             </div>
           </div>
@@ -1366,8 +1381,10 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
           <button
             type="button"
             onClick={handleEnd}
-            disabled={ending || turnCount < 1}
-            aria-label={ending ? "フィードバックを作成中..." : "会話を終える"}
+            disabled={ending}
+            aria-label={
+              ending ? "処理中..." : turnCount < 1 ? "退室する" : "会話を終える"
+            }
             className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-ink text-paper transition hover:opacity-90 disabled:cursor-not-allowed ${
               ending ? "opacity-90" : "disabled:opacity-40"
             }`}
