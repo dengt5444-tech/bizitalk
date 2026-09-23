@@ -1241,7 +1241,7 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
 
       {phase === "ended" && feedback && (
         <div className="p-6 sm:p-8">
-          <FeedbackPanel feedback={feedback} scenarioTitle={scenario.title} />
+          <FeedbackPanel feedback={feedback} scenarioTitle={scenario.title} sessionId={sessionId ?? undefined} />
 
           <div className="mt-8 flex flex-wrap gap-3 pt-2">
             <button

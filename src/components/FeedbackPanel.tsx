@@ -1,17 +1,49 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Check, Share2 } from "lucide-react";
 import type { ConversationFeedback } from "@/lib/conversation";
 
 export function FeedbackPanel({
   feedback,
   scenarioTitle,
+  sessionId,
 }: {
   feedback: ConversationFeedback;
   scenarioTitle: string;
+  sessionId?: string;
 }) {
   const [savedVocab, setSavedVocab] = useState<Set<string>>(new Set());
+  const [shareState, setShareState] = useState<"idle" | "copied">("idle");
+
+  async function handleShare() {
+    if (!sessionId) return;
+    const shareUrl = `${window.location.origin}/share/${sessionId}`;
+    const shareData = {
+      title: "ビジトーク",
+      text: `「${scenarioTitle}」でAI英会話を練習しました。フルエンシー評価 ${feedback.fluencyScore}/5！`,
+      url: shareUrl,
+    };
+    // Web Share API is the better UX where it exists (native share sheet on
+    // mobile browsers) — falls back to copying the link for desktop
+    // browsers that don't support it.
+    if (typeof navigator !== "undefined" && "share" in navigator) {
+      try {
+        await navigator.share(shareData);
+        return;
+      } catch {
+        // Cancelled by the user, or share failed — fall through to copy.
+      }
+    }
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      setShareState("copied");
+      setTimeout(() => setShareState("idle"), 2000);
+    } catch {
+      // Clipboard access can be blocked (permissions, insecure context);
+      // nothing more to do than leave the button as-is.
+    }
+  }
 
   async function handleSaveVocab(word: string, meaning: string) {
     setSavedVocab((prev) => new Set(prev).add(word));
@@ -29,9 +61,30 @@ export function FeedbackPanel({
   return (
     <div className="space-y-8">
       <div>
-        <p className="text-xs font-medium tracking-[0.2em] text-signal uppercase">
-          フルエンシー評価
-        </p>
+        <div className="flex items-start justify-between gap-3">
+          <p className="text-xs font-medium tracking-[0.2em] text-signal uppercase">
+            フルエンシー評価
+          </p>
+          {sessionId && (
+            <button
+              type="button"
+              onClick={handleShare}
+              className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-line px-3.5 py-1.5 text-xs font-medium text-ink-soft transition hover:border-ink-faint hover:text-ink"
+            >
+              {shareState === "copied" ? (
+                <>
+                  <Check size={13} strokeWidth={2} />
+                  リンクをコピーしました
+                </>
+              ) : (
+                <>
+                  <Share2 size={13} strokeWidth={2} />
+                  結果をシェア
+                </>
+              )}
+            </button>
+          )}
+        </div>
         <p className="mt-2 font-display text-3xl text-ink">
           {feedback.fluencyScore}
           <span className="text-lg text-ink-faint"> / 5</span>
