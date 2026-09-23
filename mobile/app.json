@@ -2,6 +2,7 @@
   "expo": {
     "name": "ビジトーク",
     "slug": "bizitalk-mobile",
+    "owner": "saddjj",
     "scheme": "bizitalk",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -9,8 +10,14 @@
     "userInterfaceStyle": "automatic",
     "ios": {
       "bundleIdentifier": "com.bizitalk.app",
-      "supportsTablet": true,
-      "bitcode": false
+      "supportsTablet": false,
+      "config": {
+        "usesNonExemptEncryption": false
+      },
+      "infoPlist": {
+        "CFBundleDevelopmentRegion": "ja",
+        "CFBundleAllowMixedLocalizations": true
+      }
     },
     "android": {
       "package": "com.bizitalk.app",
@@ -22,30 +29,16 @@
       "predictiveBackGestureEnabled": false,
       "permissions": [
         "android.permission.RECORD_AUDIO",
-        "android.permission.MODIFY_AUDIO_SETTINGS",
-        "android.permission.FOREGROUND_SERVICE",
-        "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK",
-        "android.permission.ACCESS_NETWORK_STATE",
-        "android.permission.CAMERA",
-        "android.permission.INTERNET",
-        "android.permission.SYSTEM_ALERT_WINDOW",
-        "android.permission.WAKE_LOCK",
-        "android.permission.BLUETOOTH"
+        "android.permission.MODIFY_AUDIO_SETTINGS"
       ]
-    },
-    "web": {
-      "favicon": "./assets/favicon.png"
     },
     "plugins": [
       "expo-router",
-      "expo-status-bar",
-      "expo-font",
-      "expo-asset",
       [
         "expo-splash-screen",
         {
           "image": "./assets/splash-icon.png",
-          "imageWidth": 220,
+          "imageWidth": 200,
           "resizeMode": "contain",
           "backgroundColor": "#f5f7fa",
           "dark": {
@@ -53,27 +46,27 @@
           }
         }
       ],
+      "expo-sqlite",
       [
         "expo-audio",
         {
-          "microphonePermission": "AI会話練習で音声を録音するためにマイクを使用します。"
+          "microphonePermission": "AI英会話の練習で、あなたの声をAIの会話相手に届けるためにマイクを使用します。",
+          "enableBackgroundPlayback": false,
+          "recordAudioAndroid": true
         }
       ],
-      [
-        "@config-plugins/react-native-webrtc",
-        {
-          "microphonePermission": "AI会話練習で音声を録音するためにマイクを使用します。",
-          "cameraPermission": "このアプリは音声のみで通信し、カメラは使用しません。"
-        }
-      ],
-      "expo-iap"
+      "expo-iap",
+      "expo-asset"
     ],
+    "experiments": {
+      "typedRoutes": true,
+      "reactCompiler": true
+    },
     "extra": {
       "router": {},
       "eas": {
         "projectId": "e94cbd8f-a4a8-4ffb-af05-19a382f8b72b"
       }
-    },
-    "owner": "saddjj"
+    }
   }
 }

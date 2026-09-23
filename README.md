@@ -104,9 +104,9 @@ Vercelにこのリポジトリを接続し、`.env.example` に記載の環境�
 
 正式リリース前に、SNSなどで告知して先行モニターを募集するための単独ランディングページです。メールアドレスを入力すると `waitlist` テーブルに保存されます(重複登録は自動的にエラーにせず「登録済み」として扱います)。ログイン不要・匿名で使えます。
 
-## 将来のネイティブアプリ化について
+## iOS / Android アプリ
 
-iOS/Android向けのネイティブアプリを検討する際は、Apple/Googleの課金ポリシー(アプリ内課金の義務化・手数料)を先に確認してください。詳細は [`docs/app-store-billing.md`](docs/app-store-billing.md) にまとめています。
+[`mobile/`](mobile/) に、このWebサイトと同じ機能・同じプラン・同じアカウント(Supabase Auth)で使えるExpo製アプリがあります。アプリはこのWebサイトのAPIを `Authorization: Bearer` で呼び出し、iOSの課金はApp Storeのアプリ内課金(`/api/iap/apple/verify` で検証)を使います。セットアップは [`mobile/README.md`](mobile/README.md)、App Storeへの提出手順は [`mobile/RELEASE_CHECKLIST.md`](mobile/RELEASE_CHECKLIST.md) を参照してください。課金ポリシーの背景は [`docs/app-store-billing.md`](docs/app-store-billing.md) にまとめています。
 
 ## 紹介プログラムについて
 
