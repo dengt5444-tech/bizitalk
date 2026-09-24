@@ -14,7 +14,7 @@ import { useTheme } from "@/theme/ThemeProvider";
 import { FaqList } from "./FaqList";
 import { ReferralCodeField } from "./ReferralCodeField";
 
-const CONVERSATION_MINUTES_PER_MONTH = { trial: 45, standard: 200, unlimited: 450 };
+const CONVERSATION_MINUTES_PER_MONTH = { trial: 45, basic: 100, standard: 200, unlimited: 450 };
 
 type PlanCard = {
   key: CheckoutPlan;
@@ -47,6 +47,20 @@ const PLANS: PlanCard[] = [
       `AI英会話を月${CONVERSATION_MINUTES_PER_MONTH.trial}分まで練習`,
       "リスニング教材は聞き放題",
       "会話ごとのAIコーチによるフィードバック",
+      "いつでも解約可能",
+    ],
+  },
+  {
+    key: "basic",
+    badge: "先行提供価格",
+    name: "ベーシックプラン",
+    futurePrice: "¥4,980",
+    price: "¥2,980",
+    accent: "signal",
+    features: [
+      `AI英会話を月${CONVERSATION_MINUTES_PER_MONTH.basic}分まで練習`,
+      "リスニング教材は聞き放題",
+      "リアルタイム音声・AIコーチのフィードバック",
       "いつでも解約可能",
     ],
   },

@@ -27,6 +27,7 @@ export const API_BASE_URL = required(
 // highlighting just can't tell tiers apart (isListeningEntitled/
 // hasActiveConversationSubscription still work for unlock checks).
 export const STRIPE_PRICE_ID_TRIAL = process.env.EXPO_PUBLIC_STRIPE_PRICE_ID_TRIAL;
+export const STRIPE_PRICE_ID_BASIC = process.env.EXPO_PUBLIC_STRIPE_PRICE_ID_BASIC;
 export const STRIPE_PRICE_ID_STANDARD = process.env.EXPO_PUBLIC_STRIPE_PRICE_ID;
 export const STRIPE_PRICE_ID_UNLIMITED = process.env.EXPO_PUBLIC_STRIPE_PRICE_ID_UNLIMITED;
 
@@ -37,5 +38,6 @@ export const STRIPE_PRICE_ID_UNLIMITED = process.env.EXPO_PUBLIC_STRIPE_PRICE_ID
 // unset on Android, which still uses Stripe checkout.
 export const APPLE_PRODUCT_ID_LISTENING = process.env.EXPO_PUBLIC_APPLE_PRODUCT_ID_LISTENING;
 export const APPLE_PRODUCT_ID_TRIAL = process.env.EXPO_PUBLIC_APPLE_PRODUCT_ID_TRIAL;
+export const APPLE_PRODUCT_ID_BASIC = process.env.EXPO_PUBLIC_APPLE_PRODUCT_ID_BASIC;
 export const APPLE_PRODUCT_ID_STANDARD = process.env.EXPO_PUBLIC_APPLE_PRODUCT_ID;
 export const APPLE_PRODUCT_ID_UNLIMITED = process.env.EXPO_PUBLIC_APPLE_PRODUCT_ID_UNLIMITED;

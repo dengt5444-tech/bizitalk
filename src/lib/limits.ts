@@ -22,11 +22,13 @@ import type { ConversationPlan } from "@/lib/entitlements";
 // permanent constants.
 //
 //   trial      (¥980):   980 - ¥35 Stripe fee                     = ¥945 budget  -> 45分/月  (¥720, ~24% margin)
+//   basic    (¥2,980): 2,980 - ¥107 Stripe fee - ¥1,000 referral   = ¥1,873 budget -> 100分/月 (¥1,600, ~15% margin)
 //   standard (¥4,990): 4,990 - ¥180 Stripe fee - ¥1,000 referral   = ¥3,810 budget -> 200分/月 (¥3,200, ~16% margin)
 //   unlimited(¥9,900): 9,900 - ¥356 Stripe fee - ¥1,000 referral   = ¥8,544 budget -> 450分/月 (¥7,200, ~16% margin;
 //                      framed to users as a generous fair-use ceiling, not a headline limit, since the plan is sold as "使い放題")
 export const CONVERSATION_MINUTES_PER_MONTH: Record<ConversationPlan, number> = {
   trial: 45,
+  basic: 100,
   standard: 200,
   unlimited: 450,
 };

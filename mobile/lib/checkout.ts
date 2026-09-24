@@ -1,7 +1,7 @@
 import * as WebBrowser from "expo-web-browser";
 import { api } from "./api";
 
-export type CheckoutPlan = "listening" | "trial" | "standard" | "unlimited";
+export type CheckoutPlan = "listening" | "trial" | "basic" | "standard" | "unlimited";
 
 // Stripe redirects to this custom scheme (see MOBILE_RETURN_SCHEME in
 // ../src/app/api/checkout/route.ts) once checkout finishes; openAuthSessionAsync

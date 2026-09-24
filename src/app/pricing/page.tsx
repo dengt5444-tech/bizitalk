@@ -43,7 +43,7 @@ const FAQ: { question: string; answer: string }[] = [
 ];
 
 type PlanCard = {
-  key: "trial" | "standard" | "unlimited";
+  key: "trial" | "basic" | "standard" | "unlimited";
   badge: string;
   name: string;
   // The price this plan is genuinely planned to move to later, once the
@@ -55,7 +55,7 @@ type PlanCard = {
   // actually charged as a misleading dual-price display.
   futurePrice: string;
   price: string;
-  accent: "amber" | "signal" | "violet";
+  accent: "amber" | "signal" | "violet" | "mint";
   features: string[];
 };
 
@@ -63,6 +63,7 @@ const ACCENTS = {
   amber: { text: "text-amber-dim", tint: "bg-amber-tint", tintText: "text-amber-dim" },
   signal: { text: "text-signal", tint: "bg-signal-tint", tintText: "text-signal-dim" },
   violet: { text: "text-violet-dim", tint: "bg-violet-tint", tintText: "text-violet-dim" },
+  mint: { text: "text-mint-dim", tint: "bg-mint-tint", tintText: "text-mint-dim" },
 } as const;
 
 export default async function PricingPage() {
@@ -80,6 +81,19 @@ export default async function PricingPage() {
       features: [
         `AI英会話を月${CONVERSATION_MINUTES_PER_MONTH.trial}分まで練習`,
         "会話ごとのAIコーチによるフィードバック",
+        "いつでも解約可能",
+      ],
+    },
+    {
+      key: "basic",
+      badge: "先行提供価格",
+      name: "ベーシックプラン",
+      futurePrice: "¥4,980",
+      price: "¥2,980",
+      accent: "mint",
+      features: [
+        `AI英会話を月${CONVERSATION_MINUTES_PER_MONTH.basic}分まで練習`,
+        "リアルタイム音声・AIコーチのフィードバック",
         "いつでも解約可能",
       ],
     },
@@ -114,7 +128,7 @@ export default async function PricingPage() {
   ];
 
   return (
-    <main className="mx-auto max-w-5xl px-6 py-14 sm:py-20">
+    <main className="mx-auto max-w-6xl px-6 py-14 sm:py-20">
       <div className="text-center">
         <p className="text-xs font-medium tracking-[0.2em] text-signal uppercase">
           Pricing
@@ -133,7 +147,7 @@ export default async function PricingPage() {
         </Suspense>
       )}
 
-      <div className="mt-10 grid gap-6 sm:grid-cols-3">
+      <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
         {plans.map((plan, i) => {
           const { text: accentText, tint: accentTint, tintText: accentTintText } = ACCENTS[plan.accent];
           const current = conversationPlan === plan.key;

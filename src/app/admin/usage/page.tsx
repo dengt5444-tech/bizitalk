@@ -13,11 +13,12 @@ const ESTIMATED_YEN_PER_MINUTE = 16;
 
 const ACTIVE_STATUSES = new Set(["active", "trialing"]);
 
-type PlanKey = "trial" | "standard" | "unlimited" | "free";
+type PlanKey = "trial" | "basic" | "standard" | "unlimited" | "free";
 
 function planForPriceId(priceId: string | null | undefined): PlanKey | null {
   if (!priceId) return null;
   if (priceId === process.env.STRIPE_PRICE_ID_TRIAL) return "trial";
+  if (priceId === process.env.STRIPE_PRICE_ID_BASIC) return "basic";
   if (priceId === process.env.STRIPE_PRICE_ID_UNLIMITED) return "unlimited";
   if (priceId === process.env.STRIPE_PRICE_ID) return "standard";
   return null;
@@ -25,12 +26,13 @@ function planForPriceId(priceId: string | null | undefined): PlanKey | null {
 
 const PLAN_LABEL: Record<PlanKey, string> = {
   trial: "お試し",
+  basic: "ベーシック",
   standard: "スタンダード",
   unlimited: "使い放題",
   free: "無料(未登録)",
 };
 
-const PLAN_ORDER: PlanKey[] = ["free", "trial", "standard", "unlimited"];
+const PLAN_ORDER: PlanKey[] = ["free", "trial", "basic", "standard", "unlimited"];
 
 export default async function AdminUsagePage() {
   const user = await getCurrentUser();

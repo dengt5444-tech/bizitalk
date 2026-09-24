@@ -30,17 +30,18 @@ export function isAdminEmail(email: string | null | undefined) {
   return !!email && ADMIN_EMAILS.has(email.toLowerCase());
 }
 
-// The three AI conversation tiers are separate Stripe prices under one
+// The four AI conversation tiers are separate Stripe prices under one
 // product (this app's own `subscriptions` table stores whichever price_id
 // the user is subscribed to); the tier name is derived from which price_id
 // that is, rather than a separate DB column.
-export type ConversationPlan = "trial" | "standard" | "unlimited";
+export type ConversationPlan = "trial" | "basic" | "standard" | "unlimited";
 
 function conversationPlanForPriceId(
   priceId: string | null | undefined,
 ): ConversationPlan | null {
   if (!priceId) return null;
   if (priceId === process.env.STRIPE_PRICE_ID_TRIAL) return "trial";
+  if (priceId === process.env.STRIPE_PRICE_ID_BASIC) return "basic";
   if (priceId === process.env.STRIPE_PRICE_ID_UNLIMITED) return "unlimited";
   if (priceId === process.env.STRIPE_PRICE_ID) return "standard";
   return null;

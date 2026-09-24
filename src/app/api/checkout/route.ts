@@ -10,18 +10,19 @@ import { resolveReferralCode } from "@/lib/referrals";
 // redirects here.
 const MOBILE_RETURN_SCHEME = "bizitalk://checkout";
 
-// Four Stripe prices under two entitlement tables: the standalone
+// Five Stripe prices under two entitlement tables: the standalone
 // "listening" plan writes to gakuto_subscriptions (shared with Bijirisu),
-// while the three AI conversation tiers (trial/standard/unlimited) all
-// write to this app's own subscriptions table — the specific tier is
+// while the four AI conversation tiers (trial/basic/standard/unlimited)
+// all write to this app's own subscriptions table — the specific tier is
 // recovered later from which price_id ended up stored there (see
 // lib/entitlements.ts), so checkout only needs to tag the coarse table
 // destination in metadata, not the tier itself.
-type CheckoutPlan = "listening" | "trial" | "standard" | "unlimited";
+type CheckoutPlan = "listening" | "trial" | "basic" | "standard" | "unlimited";
 
 const PRICE_ENV_VAR_FOR_PLAN: Record<CheckoutPlan, string> = {
   listening: "STRIPE_PRICE_ID_LISTENING",
   trial: "STRIPE_PRICE_ID_TRIAL",
+  basic: "STRIPE_PRICE_ID_BASIC",
   standard: "STRIPE_PRICE_ID",
   unlimited: "STRIPE_PRICE_ID_UNLIMITED",
 };
@@ -38,7 +39,7 @@ function successPathForPlan(plan: CheckoutPlan) {
   return plan === "listening" ? "/materials" : "/conversation";
 }
 
-const VALID_PLANS: CheckoutPlan[] = ["listening", "trial", "standard", "unlimited"];
+const VALID_PLANS: CheckoutPlan[] = ["listening", "trial", "basic", "standard", "unlimited"];
 
 export async function POST(request: Request) {
   const { user } = await getAuthedClient();

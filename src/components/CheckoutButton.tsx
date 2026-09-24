@@ -4,10 +4,11 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { REFERRAL_CODE_STORAGE_KEY } from "@/components/ReferralCodeField";
 
-type Plan = "trial" | "standard" | "unlimited";
+type Plan = "trial" | "basic" | "standard" | "unlimited";
 
 const PLAN_LABEL: Record<Plan, string> = {
   trial: "¥980で始める",
+  basic: "¥2,980で始める",
   standard: "¥4,990で始める",
   unlimited: "¥9,900で始める",
 };

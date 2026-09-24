@@ -1,7 +1,7 @@
 // Product-id <-> plan mapping, mirroring how lib/entitlements.ts maps
-// Stripe price IDs to plans — same four plans, just identified by App
+// Stripe price IDs to plans — same five plans, just identified by App
 // Store Connect product identifiers instead of Stripe price IDs.
-export type IapPlan = "listening" | "trial" | "standard" | "unlimited";
+export type IapPlan = "listening" | "trial" | "basic" | "standard" | "unlimited";
 
 export function appleProductIdForPlan(plan: IapPlan): string | undefined {
   switch (plan) {
@@ -9,6 +9,8 @@ export function appleProductIdForPlan(plan: IapPlan): string | undefined {
       return process.env.APPLE_PRODUCT_ID_LISTENING;
     case "trial":
       return process.env.APPLE_PRODUCT_ID_TRIAL;
+    case "basic":
+      return process.env.APPLE_PRODUCT_ID_BASIC;
     case "standard":
       return process.env.APPLE_PRODUCT_ID;
     case "unlimited":
@@ -20,6 +22,7 @@ export function planForAppleProductId(productId: string | null | undefined): Iap
   if (!productId) return null;
   if (productId === process.env.APPLE_PRODUCT_ID_LISTENING) return "listening";
   if (productId === process.env.APPLE_PRODUCT_ID_TRIAL) return "trial";
+  if (productId === process.env.APPLE_PRODUCT_ID_BASIC) return "basic";
   if (productId === process.env.APPLE_PRODUCT_ID) return "standard";
   if (productId === process.env.APPLE_PRODUCT_ID_UNLIMITED) return "unlimited";
   return null;

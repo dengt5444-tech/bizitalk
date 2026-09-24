@@ -1,10 +1,15 @@
-import { STRIPE_PRICE_ID_STANDARD, STRIPE_PRICE_ID_TRIAL, STRIPE_PRICE_ID_UNLIMITED } from "./env";
+import {
+  STRIPE_PRICE_ID_BASIC,
+  STRIPE_PRICE_ID_STANDARD,
+  STRIPE_PRICE_ID_TRIAL,
+  STRIPE_PRICE_ID_UNLIMITED,
+} from "./env";
 import { IAP_PLAN_FOR_PRODUCT_ID } from "./iap";
 import { supabase } from "./supabase";
 
 const ACTIVE_STATUSES = new Set(["active", "trialing"]);
 
-export type ConversationPlan = "trial" | "standard" | "unlimited";
+export type ConversationPlan = "trial" | "basic" | "standard" | "unlimited";
 
 // Mirrors ../src/lib/entitlements.ts, but queried directly against Supabase
 // (both tables are owner-SELECT-only under RLS, and the signed-in mobile
@@ -46,10 +51,11 @@ export async function getConversationPlan(userId: string | null | undefined): Pr
 
   if (data.source === "apple_iap") {
     const plan = IAP_PLAN_FOR_PRODUCT_ID[data.apple_product_id ?? ""];
-    return plan === "trial" || plan === "standard" || plan === "unlimited" ? plan : null;
+    return plan === "trial" || plan === "basic" || plan === "standard" || plan === "unlimited" ? plan : null;
   }
 
   if (data.price_id === STRIPE_PRICE_ID_TRIAL) return "trial";
+  if (data.price_id === STRIPE_PRICE_ID_BASIC) return "basic";
   if (data.price_id === STRIPE_PRICE_ID_UNLIMITED) return "unlimited";
   if (data.price_id === STRIPE_PRICE_ID_STANDARD) return "standard";
   return null;
