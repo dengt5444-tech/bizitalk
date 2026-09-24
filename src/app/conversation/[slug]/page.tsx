@@ -2,7 +2,7 @@ import Link from "next/link";
 import { ArrowLeft, BookOpen, Clock } from "lucide-react";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { getCurrentUser } from "@/lib/entitlements";
+import { getConversationPlan, getCurrentUser } from "@/lib/entitlements";
 import { ConversationRoom } from "@/components/ConversationRoom";
 import { Avatar } from "@/components/Avatar";
 import {
@@ -37,10 +37,12 @@ export default async function ConversationScenarioPage({
 
   const user = await getCurrentUser();
   // Conversation practice always needs an account (each session is saved
-  // per-user, and usage is tracked per-user for the monthly minutes cap),
-  // but every scenario is open to any signed-in user — a plan only changes
-  // how many minutes/month they get (FREE_MINUTES_PER_MONTH with no plan).
+  // per-user, and usage is tracked per-user for the minutes cap), but
+  // every scenario is open to any signed-in user — a plan only changes how
+  // many minutes they get (FREE_TRIAL_MINUTES once, ever, with no plan).
   const unlocked = !!user;
+  const conversationPlan = user ? await getConversationPlan(user) : null;
+  const isFreeTier = !!user && conversationPlan === null;
 
   return (
     <main className="mx-auto max-w-2xl px-6 py-14 sm:py-20">
@@ -115,6 +117,7 @@ export default async function ConversationScenarioPage({
               personaRole: scenario.persona_role,
               openingLine: scenario.opening_line,
             }}
+            isFreeTier={isFreeTier}
           />
         ) : (
           <div className="rounded-3xl bg-paper-dim p-8 text-center shadow-card">
@@ -122,7 +125,7 @@ export default async function ConversationScenarioPage({
               ログインが必要です
             </p>
             <p className="mt-2 text-sm text-ink-soft">
-              ログインすれば、このシーンも月5分まで無料でお試しいただけます。
+              ログインすれば、初回10分間の無料体験でこのシーンもお試しいただけます。
             </p>
             <div className="mt-6 flex justify-center gap-3">
               {!user && (

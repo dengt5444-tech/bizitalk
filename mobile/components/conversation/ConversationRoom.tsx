@@ -32,7 +32,16 @@ type Phase = "idle" | "connecting" | "chatting" | "ended";
 type Mode = "realtime" | "text";
 type Hint = { reply: string; gloss: string };
 
-export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
+export function ConversationRoom({
+  scenario,
+  isFreeTier = false,
+}: {
+  scenario: ScenarioInfo;
+  // True for a signed-in user with no active subscription — the free
+  // trial is a one-time grant, so the moment they see their scored
+  // feedback is exactly when the paid plans should be pitched.
+  isFreeTier?: boolean;
+}) {
   const theme = useTheme();
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -265,7 +274,9 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
       setError(
         code === "monthly_limit_reached"
           ? "今月のAI会話の利用時間の上限に達しました。月が変わると再びご利用いただけます。"
-          : "会話を開始できませんでした。もう一度お試しください。",
+          : code === "free_trial_used"
+            ? "無料体験の10分を使い切りました。プランにご登録いただくと、続けて練習できます。"
+            : "会話を開始できませんでした。もう一度お試しください。",
       );
       setPhase("idle");
     } finally {
@@ -709,6 +720,17 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
     return (
       <View style={{ gap: 20 }}>
         <FeedbackPanel feedback={feedback} scenarioTitle={scenario.title} />
+        {isFreeTier && (
+          <Card style={{ alignItems: "center", gap: 8, paddingVertical: 20, backgroundColor: theme.colors.signalTint }}>
+            <Text weight="semibold" style={{ textAlign: "center" }}>
+              無料体験はここまでです
+            </Text>
+            <Text size={13} color="inkSoft" style={{ textAlign: "center" }}>
+              プランにご登録いただくと、他のシーンも含めてもっと練習を続けられます。
+            </Text>
+            <Button label="料金プランを見る" onPress={() => router.push("/(tabs)/mypage")} />
+          </Card>
+        )}
         <View style={{ flexDirection: "row", gap: 10, flexWrap: "wrap" }}>
           <Button label="もう一度話す" onPress={handleRestart} />
           <Button label="他のシーンを見る" variant="secondary" onPress={() => router.push("/(tabs)/conversation")} />

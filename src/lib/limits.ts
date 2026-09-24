@@ -33,15 +33,28 @@ export const CONVERSATION_MINUTES_PER_MONTH: Record<ConversationPlan, number> = 
   unlimited: 450,
 };
 
-// Cap applied to logged-in users with no active subscription (trying the
-// one free scenario) — deliberately much smaller than any paid tier, just
-// enough to sample the experience before committing to a plan.
-export const FREE_MINUTES_PER_MONTH = 5;
+// A one-time allowance for logged-in users with no active subscription,
+// granted at signup rather than renewed every month — enough to complete
+// exactly one full roleplay (a negotiation or interview scenario) through
+// to its scored feedback, which is the moment the paid plans are pitched.
+// Deliberately NOT called *_PER_MONTH: callers must treat this as a
+// lifetime cap (see the usage-window handling in
+// /api/conversation/sessions/route.ts), not a monthly-resetting one like
+// the paid tiers below.
+export const FREE_TRIAL_MINUTES = 10;
 
 export function minutesCapFor(plan: ConversationPlan | "admin" | null): number | null {
   if (plan === "admin") return null;
-  if (plan === null) return FREE_MINUTES_PER_MONTH;
+  if (plan === null) return FREE_TRIAL_MINUTES;
   return CONVERSATION_MINUTES_PER_MONTH[plan];
+}
+
+// Whether the usage window minutesCapFor's return value applies against is
+// a lifetime total (free/no-plan users — FREE_TRIAL_MINUTES never resets)
+// or the current calendar month (every paid tier, which renews with their
+// subscription).
+export function usageWindowIsLifetime(plan: ConversationPlan | "admin" | null): boolean {
+  return plan === null;
 }
 
 // Safety ceiling on how much duration a single session can contribute to a

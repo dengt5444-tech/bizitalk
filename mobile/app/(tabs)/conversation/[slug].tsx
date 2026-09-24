@@ -10,6 +10,7 @@ import { ErrorState } from "@/components/ui/ErrorState";
 import { ScreenScroll } from "@/components/ui/ScreenContainer";
 import { Heading, Text } from "@/components/ui/Text";
 import { useAuth } from "@/context/AuthProvider";
+import { getConversationPlan } from "@/lib/entitlements";
 import { CATEGORY_LABELS, LEVEL_LABELS, type ScenarioCategory, type ScenarioLevel } from "@/lib/scenarios";
 import { getScenarioBySlug, type ScenarioDetail } from "@/lib/queries/scenarios";
 
@@ -19,6 +20,7 @@ export default function ConversationScenarioScreen() {
   const { user } = useAuth();
   const [scenario, setScenario] = useState<ScenarioDetail | null | undefined>(undefined);
   const [loadError, setLoadError] = useState(false);
+  const [isFreeTier, setIsFreeTier] = useState(false);
 
   const reload = useCallback(() => {
     if (typeof slug !== "string") return Promise.resolve();
@@ -33,6 +35,12 @@ export default function ConversationScenarioScreen() {
   useEffect(() => {
     reload();
   }, [reload]);
+
+  useEffect(() => {
+    getConversationPlan(user?.id)
+      .then((plan) => setIsFreeTier(!!user && plan === null))
+      .catch(() => setIsFreeTier(false));
+  }, [user]);
 
   if (scenario === undefined) {
     if (loadError) {
@@ -97,12 +105,13 @@ export default function ConversationScenarioScreen() {
             personaRole: scenario.persona_role,
             openingLine: scenario.opening_line,
           }}
+          isFreeTier={isFreeTier}
         />
       ) : (
         <Card style={{ alignItems: "center", gap: 8, paddingVertical: 32 }}>
           <Heading level={4}>ログインが必要です</Heading>
           <Text size={13} color="inkSoft" style={{ textAlign: "center" }}>
-            ログインすれば、このシーンも月5分まで無料でお試しいただけます。
+            ログインすれば、初回10分間の無料体験でこのシーンもお試しいただけます。
           </Text>
           <View style={{ flexDirection: "row", gap: 10, marginTop: 8 }}>
             <Button label="ログイン" variant="secondary" onPress={() => router.push("/login")} />

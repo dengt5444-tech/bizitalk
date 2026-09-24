@@ -87,7 +87,7 @@ export default function Home() {
               <span className="flex h-4 w-4 items-center justify-center rounded-full bg-amber text-paper">
                 <Sparkles size={10} strokeWidth={2.5} />
               </span>
-              登録すれば全シーン月5分まで無料でお試しいただけます
+              登録すると初回10分間、無料でお試しいただけます
             </span>
             <h1 className="mt-8 font-display text-5xl leading-[1.15] font-semibold text-ink sm:text-7xl sm:leading-[1.08]">
               誰と話すかで、

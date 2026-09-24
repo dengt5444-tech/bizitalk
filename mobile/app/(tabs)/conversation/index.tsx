@@ -87,7 +87,7 @@ export default function ConversationScreen() {
           誰と、どんな場面で話すかで英語は変わります。相手役ごとにキャラクター設定されたAIと練習し、会話が終わるとAIコーチがフィードバックしてくれます。
         </Text>
         <Text size={13} color="inkFaint" style={{ marginTop: 6 }}>
-          ログインすれば、どのシーンも月5分まで無料でお試しいただけます。
+          ログインすると、初回10分間の無料体験でどのシーンもお試しいただけます。
         </Text>
       </View>
 

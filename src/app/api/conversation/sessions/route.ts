@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getAuthedClient } from "@/lib/supabase/api";
 import { getConversationPlan } from "@/lib/entitlements";
-import { minutesCapFor } from "@/lib/limits";
+import { minutesCapFor, usageWindowIsLifetime } from "@/lib/limits";
 import {
   CUSTOM_TOPIC_MAX_LENGTH,
   FREE_TALK_SLUG,
@@ -27,13 +27,15 @@ export async function POST(request: Request) {
   startOfMonth.setUTCDate(1);
   startOfMonth.setUTCHours(0, 0, 0, 0);
 
-  // The scenario lookup, the plan lookup, and the monthly-usage lookup
-  // don't depend on each other's results (only on `user`, already known)
-  // — running them concurrently instead of one after another was most of
-  // where "starting a conversation" spent its time, since each is its own
-  // network round trip to Supabase. The usage rows are fetched
-  // unconditionally (cheap indexed query) since we don't know yet whether
-  // the plan even has a cap; capMinutes decides below whether to use them.
+  // The scenario lookup, the plan lookup, and the usage lookup don't
+  // depend on each other's results (only on `user`, already known) — running
+  // them concurrently instead of one after another was most of where
+  // "starting a conversation" spent its time, since each is its own network
+  // round trip to Supabase. The usage rows are fetched unconditionally and
+  // without a date filter (cheap, indexed by user_id — realistically few
+  // rows either way) since which window actually applies (this calendar
+  // month for a paid plan, all-time for the free tier's one-time grant —
+  // see usageWindowIsLifetime) isn't known until `plan` resolves below.
   const [{ data: scenario }, plan, { data: usageRows }] = await Promise.all([
     supabase
       .from("conversation_scenarios")
@@ -45,9 +47,8 @@ export async function POST(request: Request) {
     getConversationPlan(user, supabase),
     supabase
       .from("conversation_sessions")
-      .select("duration_seconds")
-      .eq("user_id", user.id)
-      .gte("created_at", startOfMonth.toISOString()),
+      .select("duration_seconds, created_at")
+      .eq("user_id", user.id),
   ]);
 
   if (!scenario) {
@@ -55,19 +56,23 @@ export async function POST(request: Request) {
   }
 
   // Any signed-in user can try any scenario — access isn't gated per
-  // scenario. What differs by plan is purely how many minutes/month they
-  // get: FREE_MINUTES_PER_MONTH for no plan, a larger cap per paid tier
-  // (see minutesCapFor below).
+  // scenario. What differs by plan is purely how many minutes they get:
+  // FREE_TRIAL_MINUTES once, ever, for no plan, or a larger cap that
+  // renews every month per paid tier (see minutesCapFor below).
   const capMinutes = minutesCapFor(plan);
   if (capMinutes !== null) {
-    const usedSeconds = (usageRows ?? []).reduce(
+    const lifetime = usageWindowIsLifetime(plan);
+    const relevantRows = (usageRows ?? []).filter(
+      (row) => lifetime || new Date(row.created_at) >= startOfMonth,
+    );
+    const usedSeconds = relevantRows.reduce(
       (sum, row) => sum + (row.duration_seconds ?? 0),
       0,
     );
 
     if (usedSeconds >= capMinutes * 60) {
       return NextResponse.json(
-        { error: "monthly_limit_reached" },
+        { error: lifetime ? "free_trial_used" : "monthly_limit_reached" },
         { status: 429 },
       );
     }

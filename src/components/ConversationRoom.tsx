@@ -149,7 +149,17 @@ function extractItemText(item: RealtimeConversationItem): string {
   return "";
 }
 
-export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
+export function ConversationRoom({
+  scenario,
+  isFreeTier = false,
+}: {
+  scenario: ScenarioInfo;
+  // True for a signed-in user with no active subscription — the free
+  // trial is a one-time grant (see FREE_TRIAL_MINUTES), so the moment
+  // they see their scored feedback is exactly when the paid plans should
+  // be pitched, not left for them to stumble onto /pricing later.
+  isFreeTier?: boolean;
+}) {
   const router = useRouter();
   const [phase, setPhase] = useState<Phase>("idle");
   const [mode, setMode] = useState<Mode | null>(null);
@@ -845,7 +855,9 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
       setError(
         code === "monthly_limit_reached"
           ? "今月のAI会話の利用時間の上限に達しました。月が変わると再びご利用いただけます。"
-          : "会話を開始できませんでした。もう一度お試しください。",
+          : code === "free_trial_used"
+            ? "無料体験の10分を使い切りました。プランにご登録いただくと、続けて練習できます。"
+            : "会話を開始できませんでした。もう一度お試しください。",
       );
       setPhase("idle");
     } finally {
@@ -1242,6 +1254,23 @@ export function ConversationRoom({ scenario }: { scenario: ScenarioInfo }) {
       {phase === "ended" && feedback && (
         <div className="p-6 sm:p-8">
           <FeedbackPanel feedback={feedback} scenarioTitle={scenario.title} sessionId={sessionId ?? undefined} />
+
+          {isFreeTier && (
+            <div className="mt-8 rounded-2xl bg-signal-tint p-5 text-center sm:p-6">
+              <p className="font-display font-semibold text-ink">
+                無料体験はここまでです
+              </p>
+              <p className="mt-1.5 text-sm text-ink-soft">
+                プランにご登録いただくと、他のシーンも含めてもっと練習を続けられます。
+              </p>
+              <Link
+                href="/pricing"
+                className="mt-4 inline-block rounded-full bg-signal px-6 py-3 text-sm font-medium text-paper transition hover:bg-signal-dim"
+              >
+                料金プランを見る
+              </Link>
+            </div>
+          )}
 
           <div className="mt-8 flex flex-wrap gap-3 pt-2">
             <button

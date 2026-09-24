@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { getCurrentUser, isAdminEmail } from "@/lib/entitlements";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { CONVERSATION_MINUTES_PER_MONTH, FREE_MINUTES_PER_MONTH } from "@/lib/limits";
+import { CONVERSATION_MINUTES_PER_MONTH, FREE_TRIAL_MINUTES } from "@/lib/limits";
 
 export const dynamic = "force-dynamic";
 
@@ -75,8 +75,11 @@ export default async function AdminUsagePage() {
   const totalMinutes = Math.round(totalSeconds / 60);
   const estimatedCost = totalMinutes * ESTIMATED_YEN_PER_MINUTE;
 
-  const capMinutesFor = (plan: PlanKey): number =>
-    plan === "free" ? FREE_MINUTES_PER_MONTH : CONVERSATION_MINUTES_PER_MONTH[plan];
+  // The free row's cap is a one-time signup grant, not a monthly one like
+  // every paid tier — labeled differently here so it doesn't read as
+  // "resets every month" next to the others.
+  const capLabelFor = (plan: PlanKey): string =>
+    plan === "free" ? `${FREE_TRIAL_MINUTES}(初回のみ)` : `${CONVERSATION_MINUTES_PER_MONTH[plan]}`;
 
   return (
     <main className="mx-auto max-w-3xl px-6 py-14 sm:py-20">
@@ -115,7 +118,7 @@ export default async function AdminUsagePage() {
             <tr>
               <th className="px-4 py-3 font-medium">プラン</th>
               <th className="px-4 py-3 font-medium">利用時間(分)</th>
-              <th className="px-4 py-3 font-medium">上限(分/月)</th>
+              <th className="px-4 py-3 font-medium">上限(分)</th>
               <th className="px-4 py-3 font-medium">推定コスト</th>
             </tr>
           </thead>
@@ -128,7 +131,7 @@ export default async function AdminUsagePage() {
                     {PLAN_LABEL[plan]}
                   </td>
                   <td className="px-4 py-3 text-ink">{minutes}</td>
-                  <td className="px-4 py-3 text-ink-faint">{capMinutesFor(plan)}</td>
+                  <td className="px-4 py-3 text-ink-faint">{capLabelFor(plan)}</td>
                   <td className="px-4 py-3 text-ink-faint">
                     ¥{(minutes * ESTIMATED_YEN_PER_MINUTE).toLocaleString("ja-JP")}
                   </td>

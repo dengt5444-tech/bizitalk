@@ -31,9 +31,9 @@ export default async function ConversationPage() {
   ]);
 
   // Conversation practice always needs an account (each session is saved
-  // per-user, and usage is tracked per-user for the monthly minutes cap),
-  // but every scenario is open to any signed-in user — a plan only changes
-  // how many minutes/month they get (FREE_MINUTES_PER_MONTH with no plan).
+  // per-user, and usage is tracked per-user for the minutes cap), but
+  // every scenario is open to any signed-in user — a plan only changes how
+  // many minutes they get (FREE_TRIAL_MINUTES once, ever, with no plan).
   const unlocked = !!user;
 
   const freeTalk = (scenarios ?? []).find((s) => s.slug === FREE_TALK_SLUG) ?? null;
@@ -62,7 +62,7 @@ export default async function ConversationPage() {
         誰と、どんな場面で話すかで英語は変わります。CEOへの報告、海外の同僚との日々のやり取り、取引先との交渉——相手役ごとにキャラクター設定されたAIとリアルタイム音声で練習し、会話が終わるとAIコーチがフィードバックしてくれます。
       </p>
       <p className="mt-2 max-w-xl text-sm text-ink-faint">
-        ログインすれば、どのシーンも月5分まで無料でお試しいただけます。
+        ログインすると、初回10分間の無料体験でどのシーンもお試しいただけます。
       </p>
 
       {freeTalk && (
