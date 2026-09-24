@@ -24,6 +24,10 @@ type PlanCard = {
   price: string;
   accent: "amber" | "signal";
   features: string[];
+  // Personal-time perks (LINE/Zoom) only scale to so many learners at
+  // once — shown as a capacity badge alongside the price rather than
+  // silently enforced anywhere yet.
+  limitedSeats?: string;
 };
 
 const PLANS: PlanCard[] = [
@@ -67,14 +71,17 @@ const PLANS: PlanCard[] = [
   {
     key: "standard",
     badge: "先行提供価格",
-    name: "スタンダードプラン",
+    name: "スタンダードプラン(LINE伴走)",
     futurePrice: "¥9,800",
-    price: "¥4,990",
+    price: "¥4,980",
     accent: "signal",
+    limitedSeats: "限定15名",
     features: [
       `全26シーンでAI会話練習(月${CONVERSATION_MINUTES_PER_MONTH.standard}分まで)`,
       "リスニング教材は聞き放題",
       "リアルタイム音声・AIコーチのフィードバック",
+      "LINEで毎週の学習プラン作成をサポート",
+      "LINEでいつでも相談可能",
       "マイページでの進捗トラッキング",
       "いつでも解約可能",
     ],
@@ -82,14 +89,18 @@ const PLANS: PlanCard[] = [
   {
     key: "unlimited",
     badge: "先行提供価格・使い放題",
-    name: "AI英会話使い放題プラン",
+    name: "使い放題プラン(Zoom面談付き)",
     futurePrice: "¥19,800",
-    price: "¥9,900",
+    price: "¥9,980",
     accent: "signal",
+    limitedSeats: "限定5名",
     features: [
       "AI英会話が実質使い放題",
       "リスニング教材は聞き放題",
       "リアルタイム音声・AIコーチのフィードバック",
+      "LINEで毎週の学習プラン作成をサポート",
+      "LINEでいつでも相談可能",
+      "月1回のZoom個別面談付き",
       "マイページでの進捗トラッキング",
       "いつでも解約可能",
     ],
@@ -283,7 +294,10 @@ export function PricingPlans({
 
           return (
             <Card key={plan.key} style={{ alignItems: "center", gap: 14, paddingVertical: 24 }}>
-              <Badge label={plan.badge} accent={plan.accent} />
+              <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "center", gap: 6 }}>
+                <Badge label={plan.badge} accent={plan.accent} />
+                {plan.limitedSeats && <Badge label={plan.limitedSeats} accent="rose" />}
+              </View>
               <Text size={13} weight="medium" color="inkSoft">
                 {plan.name}
               </Text>

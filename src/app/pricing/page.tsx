@@ -40,6 +40,11 @@ const FAQ: { question: string; answer: string }[] = [
     answer:
       "現在ご案内している価格は、サービス立ち上げ期にご利用いただくための先行提供価格です。各プランには将来移行を予定している正式価格を明記しており、価格変更の際は事前にお知らせします(すでにご登録中の方が、通知なく値上げされることはありません)。",
   },
+  {
+    question: "スタンダード・使い放題プランのLINE伴走・Zoom面談とは?",
+    answer:
+      "運営者本人が直接サポートする特典です。スタンダードプランはLINEで毎週の学習プラン作成をサポートし、いつでも相談いただけます。使い放題プランはそれに加えて月1回のZoom個別面談が付きます。運営者が直接対応できる人数に限りがあるため、募集人数を限定しています。",
+  },
 ];
 
 type PlanCard = {
@@ -57,6 +62,10 @@ type PlanCard = {
   price: string;
   accent: "amber" | "signal" | "violet" | "mint";
   features: string[];
+  // Personal-time perks (LINE/Zoom) only scale to so many learners at
+  // once — shown as a capacity badge alongside the price rather than
+  // silently enforced anywhere yet.
+  limitedSeats?: string;
 };
 
 const ACCENTS = {
@@ -100,13 +109,16 @@ export default async function PricingPage() {
     {
       key: "standard",
       badge: "先行提供価格",
-      name: "スタンダードプラン",
+      name: "スタンダードプラン(LINE伴走)",
       futurePrice: "¥9,800",
-      price: "¥4,990",
+      price: "¥4,980",
       accent: "violet",
+      limitedSeats: "限定15名",
       features: [
         `全31シーンでAI会話練習(月${CONVERSATION_MINUTES_PER_MONTH.standard}分まで)`,
         "リアルタイム音声・AIコーチのフィードバック",
+        "LINEで毎週の学習プラン作成をサポート",
+        "LINEでいつでも相談可能",
         "マイページでの進捗トラッキング",
         "いつでも解約可能",
       ],
@@ -114,13 +126,17 @@ export default async function PricingPage() {
     {
       key: "unlimited",
       badge: "先行提供価格・使い放題",
-      name: "AI英会話使い放題プラン",
+      name: "使い放題プラン(Zoom面談付き)",
       futurePrice: "¥19,800",
-      price: "¥9,900",
+      price: "¥9,980",
       accent: "amber",
+      limitedSeats: "限定5名",
       features: [
         "AI英会話が実質使い放題",
         "リアルタイム音声・AIコーチのフィードバック",
+        "LINEで毎週の学習プラン作成をサポート",
+        "LINEでいつでも相談可能",
+        "月1回のZoom個別面談付き",
         "マイページでの進捗トラッキング",
         "いつでも解約可能",
       ],
@@ -157,9 +173,16 @@ export default async function PricingPage() {
             <div
               className="h-full rounded-[1.75rem] bg-surface p-8 text-center shadow-card transition duration-300 hover:-translate-y-1.5 hover:shadow-elevated"
             >
-              <span className={`inline-block rounded-full ${accentTint} px-4 py-1.5 text-xs font-semibold ${accentTintText}`}>
-                {plan.badge}
-              </span>
+              <div className="flex flex-wrap items-center justify-center gap-1.5">
+                <span className={`inline-block rounded-full ${accentTint} px-4 py-1.5 text-xs font-semibold ${accentTintText}`}>
+                  {plan.badge}
+                </span>
+                {plan.limitedSeats && (
+                  <span className="inline-block rounded-full bg-rose-tint px-4 py-1.5 text-xs font-semibold text-rose">
+                    {plan.limitedSeats}
+                  </span>
+                )}
+              </div>
 
               <p className="mt-4 text-sm font-medium text-ink-soft">{plan.name}</p>
 
