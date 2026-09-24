@@ -1,67 +1,91 @@
-# リリースに向けてユーザー側で必要な作業
+# App Store(iOS)リリースまでのチェックリスト
 
-アプリのコードは実装済みですが、以下はアカウント開設・支払い・実機での最終確認など、**ユーザー(運営者)本人にしかできない作業**です。上から順番に進めることを想定しています。
+アプリのコードは完成していますが、以下はアカウント・支払い・実機での確認など、**運営者ご本人にしかできない作業**です。上から順に進めてください。
 
 ## 1. アカウントの準備
 
 - [ ] **Apple Developer Program**(年額 $99)に登録 — https://developer.apple.com/programs/
-- [ ] **Google Play Console**(初回 $25、一度きり)に登録 — https://play.google.com/console/
-- [ ] **Expo/EAS アカウント**(無料枠でOK)を作成 — https://expo.dev/signup
-  - `mobile/` で `npm install -g eas-cli && eas login && eas init` を実行(`eas init` で `app.json` に `extra.eas.projectId` が自動追記されます)
+- [ ] **Expo(EAS)アカウント** — https://expo.dev (`app.json` の `owner: "saddjj"` / `projectId` は以前のアプリから引き継いでいます。別のアカウントを使う場合は `mobile/` で `npx eas-cli@latest init` を実行し直してください)
+- [ ] App Store Connect でアプリを新規作成(バンドルID: `com.bizitalk.app`、名前: ビジトーク、主言語: 日本語)
 
-## 2. バックエンド・環境変数の最終確認
+## 2. Webサイト(サーバー)側
 
-- [ ] Web版(Next.js)を本番ドメインにデプロイ済みであることを確認(Vercel推奨)。モバイルアプリはこのURLを `EXPO_PUBLIC_API_BASE_URL` として使います。
-- [ ] `mobile/.env`(本番ビルド用)に、本番の `EXPO_PUBLIC_SUPABASE_URL` / `EXPO_PUBLIC_SUPABASE_ANON_KEY` / `EXPO_PUBLIC_API_BASE_URL` を設定
-- [ ] (任意)`EXPO_PUBLIC_STRIPE_PRICE_ID*` を設定すると、マイページの「現在ご登録中のプラン」表示がAI会話の3プランを正しく区別できるようになります(未設定でも決済・利用制限自体は正常に動作します)
-- [ ] Web版の `STRIPE_WEBHOOK_SECRET` など、既存の環境変数一式が本番Vercelプロジェクトに設定済みであることを確認
-- [ ] iOS課金(StoreKit)用に、Web版の本番環境変数へ `APPLE_BUNDLE_ID`(`com.bizitalk.app`)と `APPLE_PRODUCT_ID_LISTENING` / `APPLE_PRODUCT_ID_TRIAL` / `APPLE_PRODUCT_ID` / `APPLE_PRODUCT_ID_UNLIMITED` を追加(下記セクション3で作成する商品IDと一致させる)。`mobile/.env` にも同じ値を `EXPO_PUBLIC_APPLE_PRODUCT_ID_*` として設定(詳細は `.env.example` / `mobile/.env.example` を参照)
+アプリはWebサイトのAPIを使うため、**アプリより先にWebサイト側を本番に反映**してください。
 
-## 3. iOS課金(StoreKit)のApp Store Connect設定
+- [ ] このブランチの変更(`src/app/api/account/plan/route.ts` の追加。アプリがご登録中のプランを表示するために使います)を本番(Vercel)にデプロイ
+- [ ] Vercelの本番環境変数に以下を設定(セクション3で作るプロダクトIDと同じ値)
+  - `APPLE_BUNDLE_ID` = `com.bizitalk.app`
+  - `APPLE_PRODUCT_ID_TRIAL` / `APPLE_PRODUCT_ID` / `APPLE_PRODUCT_ID_UNLIMITED`
+  - (App Store公開後に)`APPLE_APP_APPLE_ID` = App Store ConnectのApple ID(数字)
+- [ ] 環境変数を追加・変更したら、Vercelで再デプロイ(再デプロイするまで反映されません)
 
-iOS版アプリはStoreKit(App内課金)による購入フローを実装済みです(`expo-iap` + Apple公式ライブラリ `@apple/app-store-server-library` によるサーバー側の署名検証、`mobile/components/pricing/PricingPlans.tsx`)。Android版は引き続きStripe Checkoutです(ストアがWeb決済を許可しています)。**コード側の作業は完了しているため、以下はApp Store Connect上の設定作業のみです。**
+## 3. App内課金(サブスクリプション)の設定 — App Store Connect
 
-- [ ] App Store Connect > 該当アプリ > 機能 > App内課金 で、**自動更新サブスクリプション**のサブスクリプショングループを1つ作成
-- [ ] グループ内に、既存のStripeプランと対応する **4つの商品** を作成し、上記セクション2で設定した `APPLE_PRODUCT_ID_*` と完全に一致するプロダクトIDを付ける
-  - リスニングプラン / お試しプラン / スタンダードプラン / AI英会話使い放題プラン
-  - 各商品の価格(ティア)・表示名・説明文を、`mobile/components/pricing/PricingPlans.tsx` の `PLANS` に定義された価格に合わせて設定(Appleの価格ティアは日本円の任意の額を選べるとは限らないため、一番近いティアを選んでください)
-- [ ] 各商品を「送信準備完了」状態にする(App本体の審査提出前に商品自体の審査も必要です)
-- [ ] App Store Connect > 該当アプリ > 一般 > App情報 > App Store Server通知 で、**本番URL・サンドボックスURLの両方**に `https://<本番ドメイン>/api/webhooks/apple` を設定(バージョンは Version 2)。これにより更新・解約・返金・支払い失敗などの通知が自動でSupabaseに反映されます
-- [ ] Sandboxテスター用のApple IDを1つ作成(App Store Connect > ユーザとアクセス > Sandboxテスター)し、実機(セクション6)でこのアカウントを使って購入・復元の一連の流れをテスト
+- [ ] 「有料App」契約に同意し、銀行口座・税務情報を登録(App Store Connect >「ビジネス」)。これが済むまで課金はテストもできません
+- [ ] 「App内課金」>「サブスクリプション」でサブスクリプショングループを1つ作成(例: ビジトーク AI英会話)
+- [ ] グループ内に **3つの自動更新サブスクリプション(期間: 1か月)** を作成
+  | プラン | 参照名の例 | プロダクトIDの例 | 価格 |
+  | --- | --- | --- | --- |
+  | お試しプラン | Trial | `com.bizitalk.app.trial.monthly` | ¥980 |
+  | スタンダードプラン | Standard | `com.bizitalk.app.standard.monthly` | ¥4,990 |
+  | AI英会話使い放題プラン | Unlimited | `com.bizitalk.app.unlimited.monthly` | ¥9,900 |
+  - グループ内の順位は「使い放題 > スタンダード > お試し」の順に(上位プランへの変更がアップグレード扱いになります)
+  - 各サブスクリプションに表示名・説明文(日本語)と、審査用スクリーンショット(料金プラン画面)を登録
+- [ ] 「App Store サーバー通知」(App情報のページ)の本番URL・サンドボックスURLの両方に `https://<WebサイトのURL>/api/webhooks/apple` を設定(バージョン2)。更新・解約・返金がWebサイトのデータベースに自動で反映されます
+- [ ] 「ユーザとアクセス」>「Sandbox」でテスト用Apple IDを作成
 
-補足: レシート共有シークレット(旧App内課金APIのshared secret)は**不要**です。このアプリはStoreKit 2のJWS署名検証をApple公式ライブラリで行っており、Appleのルート証明書のみで完結する設計のためです。
+## 4. アプリの環境変数(EAS)
 
-## 4. アプリの基本情報の最終確認
+`mobile/` で以下を実行し、**production と preview と development** の各環境に登録します(値はすべて公開して問題ないものです)。
 
-- [ ] `mobile/app.json` の `ios.bundleIdentifier` / `android.package`(`com.bizitalk.app`)が、他の誰にも使われていない・今後変更しない前提で問題ないか確認(一度ストアに登録すると変更が困難です)
-- [ ] アプリ名「ビジトーク」がストアでの検索・商標上問題ないか確認(特に英語表記 "BizTalk" は Microsoft BizTalk Server という既存製品と同名なため、必要であれば表記を工夫してください。日本語の「ビジトーク」単体では大きな問題は想定していません)
-- [ ] `mobile/lib/site.ts` の運営者情報・サポートメール、`mobile/app/legal.tsx` の特定商取引法表記(販売事業者名など)が現在も正しいか再確認
+```bash
+npx eas-cli@latest env:create --environment production --visibility plaintext --name EXPO_PUBLIC_SUPABASE_URL --value "<VercelのNEXT_PUBLIC_SUPABASE_URLと同じ>"
+npx eas-cli@latest env:create --environment production --visibility plaintext --name EXPO_PUBLIC_SUPABASE_ANON_KEY --value "<VercelのNEXT_PUBLIC_SUPABASE_ANON_KEYと同じ>"
+npx eas-cli@latest env:create --environment production --visibility plaintext --name EXPO_PUBLIC_API_BASE_URL --value "https://<WebサイトのURL>"
+npx eas-cli@latest env:create --environment production --visibility plaintext --name EXPO_PUBLIC_APPLE_PRODUCT_ID_TRIAL --value "<お試しのプロダクトID>"
+npx eas-cli@latest env:create --environment production --visibility plaintext --name EXPO_PUBLIC_APPLE_PRODUCT_ID --value "<スタンダードのプロダクトID>"
+npx eas-cli@latest env:create --environment production --visibility plaintext --name EXPO_PUBLIC_APPLE_PRODUCT_ID_UNLIMITED --value "<使い放題のプロダクトID>"
+```
 
-## 5. Supabase RLS(行レベルセキュリティ)の再確認
+(`--environment preview` / `--environment development` でも同じものを登録。設定漏れがあると、アプリ起動時に「設定が不足しています」という画面が出るのですぐ気付けます)
 
-モバイルアプリは一部のテーブル(`gakuto_materials`・`vocab_decks`・`conversation_scenarios` など)にSupabaseへ直接アクセスします。実装にあたって「これらは誰でも読める(`using (true)`)公開テーブルである」「`subscriptions`・`saved_words` などは本人の行のみアクセス可能」という前提で組んでいますが、これは今回のコード調査時点の推測に基づくものです。
+## 5. ログインの確認(Webサイトと同じメールアドレスで入れること)
 
-- [ ] Supabaseダッシュボードの Authentication > Policies で、上記の前提が実際のRLS設定と一致しているか確認してください。仮に本人以外の行も読めるような緩い設定になっていた場合、モバイル・Web問わず情報漏えいのリスクがあるため、この機会に見直すことをおすすめします。
+- [ ] Supabaseダッシュボード >「Authentication」>「Email Templates」の **Magic Link** テンプレートに、ログイン用コード `{{ .Token }}` が入っていることを確認(Webサイトの「コードでログイン」と同じものなので、入っているはずです)。アプリはこのコードでログインします
+- [ ] **App Store審査用のアカウントを作成**: 審査担当者はメールを受け取れないため、パスワードでログインできるアカウントが必要です。Supabaseダッシュボード >「Authentication」>「Users」>「Add user」>「Create new user」で、審査用のメールアドレスとパスワードを入力し「Auto Confirm User」をオンにして作成してください。アプリのログイン画面の「パスワードでログイン」から入れます
+  - 審査で有料機能まで見てもらうには、このメールアドレスをVercelの `ADMIN_EMAILS` に追加しておくと確実です(サブスクリプションなしで全機能が使えます)
+- [ ] App Store Connect の「App Reviewに関する情報」>「サインイン情報」に、上記のメールアドレスとパスワードを記入。「メモ」欄に次のように書いておくと親切です:
+  > ログイン画面下部の「パスワードでログイン」から、上記のアカウントでログインしてください。AI会話は「会話練習」タブ →任意のシーン →「リアルタイム音声で話し始める」で試せます(マイクを使用します)。
 
-## 6. 実機での最終確認(このクラウド環境ではできない作業)
+## 6. ビルドして実機で確認
 
-このセッションにはXcode/Android Studio、実機・シミュレータが無いため、以下は必ずユーザー側の環境で確認してください。
+```bash
+cd mobile
+npx eas-cli@latest build --profile preview --platform ios   # 社内配布用ビルド(実機にインストール可能)
+```
 
-- [ ] `npm run build:preview:ios` / `npm run build:preview:android` でビルドし、実機にインストールして一通り操作
-- [ ] **リアルタイム音声通話**(このアプリで最も複雑な機能)が実機で問題なく動作するか(マイク許可・音声の聞こえ方・通話品質)を重点的に確認
-- [ ] ダークモード表示の確認
-- [ ] 決済(Stripe Checkout、Android/Web)が実際に完了しアプリに戻ってくるか確認
-- [ ] **iOSのStoreKit購入**を、セクション3で作成したSandboxテスターでテスト:新規購入 → マイページの表示が即座に「現在ご登録中です」に切り替わるか → 一度アンインストールして再インストールし「購入を復元」で復元されるか
-- [ ] アカウント削除が実際にSupabase側のデータ・Stripeサブスクリプション・Apple側のエンタイトルメントを削除しているか確認
+確認すること:
+- [ ] Webサイトで使っているメールアドレスでログインし、会話の記録・復習リスト・プランがWebサイトと同じ内容で表示される
+- [ ] **リアルタイム音声**: マイク許可のダイアログ → AIが最初の一言を話す → こちらが話すと返事をする → AIが話している間に自分の声が拾われない → ミュート・ヒント・終了ボタンが動く → フィードバックが表示される
+- [ ] AIの声がスピーカーから十分な音量で聞こえるか(イヤホン・Bluetoothでも確認)
+- [ ] テキストモード、フリートーク、ガイド付きモード(ヒント)
+- [ ] リスニング教材の再生(マナーモードでも音が出ること)・理解度テスト・復習リストへの保存
+- [ ] 単語帳の3モード、復習リストのフラッシュカードと削除
+- [ ] ダークモード
+- [ ] **課金**(Sandboxのテスト用Apple IDで): 購入 → すぐに「現在ご登録中です」になる → Webサイトのマイページ等でも同じプランになっている → アプリを削除して入れ直し「購入を復元」で戻る → 「サブスクリプションを管理」で解約画面が開く
+- [ ] アカウント削除(テスト用アカウントで)
 
-## 7. ストア掲載情報の入力・提出
+## 7. ストア掲載情報と提出
 
-- [ ] `mobile/STORE_LISTING.md` の内容を参考に、App Store Connect / Google Play Console の商品ページを作成
-- [ ] 実機のスクリーンショットを撮影して登録(`STORE_LISTING.md` に必要な画面のリストがあります)
-- [ ] Appのプライバシー(Apple)/ データセーフティ(Google)フォームに入力
-- [ ] 年齢制限アンケートに回答
-- [ ] `npm run submit:ios` / `npm run submit:android`、または各コンソールから提出
+- [ ] `STORE_LISTING.md` を参考に、説明文・キーワード・スクリーンショット(6.7インチ/6.5インチ)・サポートURL・プライバシーポリシーURL(`https://<WebサイトのURL>/privacy`)を入力
+- [ ] 「Appのプライバシー」と年齢制限の質問に回答(`STORE_LISTING.md` に回答の目安あり)
+- [ ] 3つのサブスクリプションを、アプリ本体と**同じ審査提出**に含める(アプリのバージョンページの「App内課金およびサブスクリプション」で選択)
+- [ ] 本番ビルドを作成して提出:
+  ```bash
+  npx eas-cli@latest build --profile production --platform ios
+  npx eas-cli@latest submit --platform ios
+  ```
 
-## 8. 審査後の対応
+## 8. 審査でリジェクトされたら
 
-- [ ] Apple/Googleの審査でリジェクトされた場合、理由を確認の上、私に共有していただければ対応します(StoreKit商品がセクション3の設定通りに審査提出されているか、App内課金の商品審査状況が最も見落としやすいポイントです)
+理由の文面をそのまま共有してください。対応します。
