@@ -88,6 +88,15 @@ export async function POST(
               // silence, which was turning into fake conversation turns
               // the AI would then reply to.
               transcription: { model: "gpt-4o-mini-transcribe" },
+              // Runs noise suppression on the input audio before it ever
+              // reaches VAD or transcription — this is a different layer
+              // from every client-side check below (duration/echo/overlap
+              // filtering only runs AFTER a transcript already exists), and
+              // targets the same "mic picks up sound that isn't the learner
+              // talking" failure at its actual source instead of downstream.
+              // "far_field" since most learners are on a laptop/room mic,
+              // not a close headset.
+              noise_reduction: { type: "far_field" },
               // "low" eagerness makes the model more patient about deciding
               // the learner has actually started/finished talking, instead
               // of reacting to every brief noise blip or mic echo of its
